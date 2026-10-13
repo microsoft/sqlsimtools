@@ -1,0 +1,243 @@
+name: Driver update monitor
+
+on:
+  schedule:
+    - cron: '17 13 * * 1'
+  workflow_dispatch:
+    inputs:
+      force_smoke:
+        description: Run all smoke jobs even when tracked versions match upstream
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  detect:
+    name: Detect upstream versions
+    runs-on: windows-latest
+    outputs:
+      any_changed: ${{ steps.versions.outputs.any_changed }}
+      windows_changed: ${{ steps.versions.outputs.windows_changed }}
+      ubuntu_changed: ${{ steps.versions.outputs.ubuntu_changed }}
+      macos_changed: ${{ steps.versions.outputs.macos_changed }}
+      mssql_python_changed: ${{ steps.versions.outputs.mssql_python_changed }}
+      windows_latest: ${{ steps.versions.outputs.windows_latest }}
+      ubuntu_latest: ${{ steps.versions.outputs.ubuntu_latest }}
+      macos_latest: ${{ steps.versions.outputs.macos_latest }}
+      mssql_python_latest: ${{ steps.versions.outputs.mssql_python_latest }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Detect driver versions
+        id: versions
+        shell: pwsh
+        run: |
+          .\release\check-driver-updates.ps1 `
+            -ReportPath (Join-Path $env:RUNNER_TEMP 'driver-update-report.json')
+
+      - name: Publish detection summary
+        shell: pwsh
+        run: |
+          $report = Get-Content (Join-Path $env:RUNNER_TEMP 'driver-update-report.json') -Raw | ConvertFrom-Json
+          @"
+          ## Driver update check
+
+          | Dependency | Tracked | Latest | Changed |
+          |---|---:|---:|:---:|
+          | ODBC Driver 18 - Windows | $($report.baseline.odbcDriver18.windows) | $($report.latest.odbcDriver18.windows) | $($report.changed.windows) |
+          | ODBC Driver 18 - Ubuntu | $($report.baseline.odbcDriver18.ubuntu) | $($report.latest.odbcDriver18.ubuntu) | $($report.changed.ubuntu) |
+          | ODBC Driver 18 - macOS | $($report.baseline.odbcDriver18.macos) | $($report.latest.odbcDriver18.macos) | $($report.changed.macos) |
+          | mssql-python | $($report.baseline.mssqlPython) | $($report.latest.mssqlPython) | $($report.changed.mssqlPython) |
+          "@ | Add-Content -LiteralPath $env:GITHUB_STEP_SUMMARY
+
+  smoke-windows-odbc:
+    name: Smoke latest Windows ODBC
+    needs: detect
+    if: needs.detect.outputs.windows_changed == 'true' || inputs.force_smoke == true
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install detected ODBC driver
+        shell: pwsh
+        run: |
+          winget install `
+            --id Microsoft.msodbcsql.18 `
+            --version '${{ needs.detect.outputs.windows_latest }}' `
+            --exact `
+            --silent `
+            --accept-package-agreements `
+            --accept-source-agreements `
+            --disable-interactivity
+
+      - name: Build and run offline smoke
+        working-directory: sqlsim
+        shell: pwsh
+        run: |
+          .\build.ps1 -Architecture x64 -Configuration Release
+          $exe = '.\build\x64\Release\sqlsim.exe'
+          & $exe --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $exe --version | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $driver = Get-OdbcDriver -Name 'ODBC Driver 18 for SQL Server' -Platform '64-bit'
+          if (-not $driver) { throw 'ODBC Driver 18 is not registered.' }
+
+  smoke-ubuntu-odbc:
+    name: Smoke latest Ubuntu ODBC
+    needs: detect
+    if: needs.detect.outputs.ubuntu_changed == 'true' || inputs.force_smoke == true
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install detected ODBC driver and build tools
+        shell: bash
+        env:
+          DRIVER_VERSION: ${{ needs.detect.outputs.ubuntu_latest }}
+        run: |
+          set -euo pipefail
+          ubuntu_version="$(. /etc/os-release && echo "$VERSION_ID")"
+          curl -sSL -O "https://packages.microsoft.com/config/ubuntu/$ubuntu_version/packages-microsoft-prod.deb"
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y \
+            "msodbcsql18=${DRIVER_VERSION}-1" \
+            unixodbc-dev \
+            build-essential \
+            cmake
+          odbcinst -q -d | grep -F '[ODBC Driver 18 for SQL Server]'
+
+      - name: Build and run offline smoke
+        working-directory: sqlsim
+        shell: bash
+        run: |
+          bash ./build-linux.sh --clean
+          bash ./smoke-test-linux.sh --skip-build
+
+  smoke-macos-odbc:
+    name: Smoke latest macOS ODBC
+    needs: detect
+    if: needs.detect.outputs.macos_changed == 'true' || inputs.force_smoke == true
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install detected ODBC driver and build tools
+        shell: bash
+        env:
+          EXPECTED_VERSION: ${{ needs.detect.outputs.macos_latest }}
+          HOMEBREW_ACCEPT_EULA: Y
+        run: |
+          set -euo pipefail
+          brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+          brew trust microsoft/mssql-release
+          brew install cmake unixodbc msodbcsql18
+          installed_version="$(brew list --versions msodbcsql18 | awk '{print $2}')"
+          test "$installed_version" = "$EXPECTED_VERSION"
+          odbcinst -q -d | grep -F '[ODBC Driver 18 for SQL Server]'
+
+      - name: Build and run offline smoke
+        working-directory: sqlsim
+        shell: bash
+        run: |
+          bash ./build-macos.sh --clean
+          bash ./smoke-test-macos.sh --skip-build
+
+  smoke-mssql-python:
+    name: Smoke latest mssql-python
+    needs: detect
+    if: needs.detect.outputs.mssql_python_changed == 'true' || inputs.force_smoke == true
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install detected driver
+        shell: pwsh
+        run: python -m pip install "mssql-python==${{ needs.detect.outputs.mssql_python_latest }}"
+
+      - name: Run offline smoke
+        working-directory: sqlpysim
+        shell: pwsh
+        run: |
+          python .\sqlpysim.py --help | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python .\sqlpysim.py --version | Out-Null
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $output = python .\sqlpysim.py -E -n 0 2>&1 | Out-String
+          if ($LASTEXITCODE -eq 0 -or $output -notmatch 'Thread count \(-n\) must be at least 1') {
+            throw "Authentication parser smoke failed: $output"
+          }
+          exit 0
+
+  report:
+    name: File driver update issue
+    needs:
+      - detect
+      - smoke-windows-odbc
+      - smoke-ubuntu-odbc
+      - smoke-macos-odbc
+      - smoke-mssql-python
+    if: always() && needs.detect.outputs.any_changed == 'true'
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ISSUE_TITLE: '[driver-monitor] Upstream driver update detected'
+      WINDOWS_LATEST: ${{ needs.detect.outputs.windows_latest }}
+      UBUNTU_LATEST: ${{ needs.detect.outputs.ubuntu_latest }}
+      MACOS_LATEST: ${{ needs.detect.outputs.macos_latest }}
+      MSSQL_PYTHON_LATEST: ${{ needs.detect.outputs.mssql_python_latest }}
+      WINDOWS_RESULT: ${{ needs.smoke-windows-odbc.result }}
+      UBUNTU_RESULT: ${{ needs.smoke-ubuntu-odbc.result }}
+      MACOS_RESULT: ${{ needs.smoke-macos-odbc.result }}
+      MSSQL_PYTHON_RESULT: ${{ needs.smoke-mssql-python.result }}
+    steps:
+      - name: Create or update assigned issue
+        shell: bash
+        run: |
+          set -euo pipefail
+          body="$(mktemp)"
+          cat > "$body" <<EOF
+          An upstream SQL driver version differs from the tracked baseline in \`.github/driver-versions.json\`.
+
+          | Dependency | Latest detected | Smoke result |
+          |---|---:|:---:|
+          | ODBC Driver 18 - Windows | $WINDOWS_LATEST | $WINDOWS_RESULT |
+          | ODBC Driver 18 - Ubuntu | $UBUNTU_LATEST | $UBUNTU_RESULT |
+          | ODBC Driver 18 - macOS | $MACOS_LATEST | $MACOS_RESULT |
+          | mssql-python | $MSSQL_PYTHON_LATEST | $MSSQL_PYTHON_RESULT |
+
+          Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+          Next steps:
+          1. Review upstream release notes.
+          2. Run the live authentication and performance matrix.
+          3. Update tracked versions only after validation.
+          4. Close this issue after the update PR merges.
+          EOF
+
+          existing="$(gh issue list \
+            --repo '${{ github.repository }}' \
+            --state open \
+            --json number,title \
+            --jq ".[] | select(.title == env.ISSUE_TITLE) | .number" \
+            | head -n 1)"
+
+          if [[ -n "$existing" ]]; then
+            gh issue comment "$existing" --repo '${{ github.repository }}' --body-file "$body"
+          else
+            gh issue create \
+              --repo '${{ github.repository }}' \
+              --title "$ISSUE_TITLE" \
+              --body-file "$body" \
+              --assignee rgward
+          fi

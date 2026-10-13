@@ -1,0 +1,19 @@
+{
+    "workloads": [
+        {
+            "queries": [
+                "SELECT DB_NAME() AS DatabaseName, GETDATE() AS CheckTime",
+                "SELECT COUNT(*) AS SessionCount FROM sys.dm_exec_sessions WHERE is_user_process = 1"
+            ],
+            "threads": 2,
+            "iterations": 5000
+        },
+        {
+            "queries": [
+                "SELECT 1/0 AS DivideByZero"
+            ],
+            "threads": 1,
+            "iterations": 3000
+        }
+    ]
+}

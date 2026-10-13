@@ -1,0 +1,11 @@
+{
+  "name": "sqlsimstudio-gui-tests",
+  "private": true,
+  "scripts": {
+    "test:gui": "playwright test --config gui-tests/playwright.config.cjs",
+    "test:responsive": "playwright test --config gui-tests/responsive.config.cjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.63.0"
+  }
+}

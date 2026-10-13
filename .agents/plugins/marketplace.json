@@ -1,0 +1,32 @@
+{
+  "name": "sqlsimtools",
+  "interface": {
+    "displayName": "sqlsimtools agent skills"
+  },
+  "plugins": [
+    {
+      "name": "sqlsim",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sqlsim"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Databases"
+    },
+    {
+      "name": "sqlpysim",
+      "source": {
+        "source": "local",
+        "path": "./plugins/sqlpysim"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Databases"
+    }
+  ]
+}

@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?>
+<replay source="Any-database sqlsim XEvent capture" server="localhost" generated="2026-10-12T20:40:07">
+  <!-- Genuine sql_batch_completed events captured from three concurrent sqlsim sessions running catalog queries; no database action, so replay runs in the connected database. -->
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.400Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>32958</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>54</value>
+    </data>
+    <data name="logical_reads">
+      <value>140</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>10</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP (10) name, type_desc FROM sys.objects ORDER BY object_id]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>52</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.401Z">
+    <data name="cpu_time">
+      <value>16000</value>
+    </data>
+    <data name="duration">
+      <value>34454</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>136</value>
+    </data>
+    <data name="logical_reads">
+      <value>1168</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>1</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS ObjectCount FROM sys.objects]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>55</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.413Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>12471</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>48</value>
+    </data>
+    <data name="logical_reads">
+      <value>397</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>5</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP (5) name, max_length FROM sys.types ORDER BY user_type_id]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>52</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.420Z">
+    <data name="cpu_time">
+      <value>15000</value>
+    </data>
+    <data name="duration">
+      <value>53121</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>144</value>
+    </data>
+    <data name="logical_reads">
+      <value>360</value>
+    </data>
+    <data name="writes">
+      <value>2</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>13</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT s.name AS SchemaName, COUNT(o.object_id) AS Objects FROM sys.schemas AS s LEFT JOIN sys.objects AS o ON o.schema_id = s.schema_id GROUP BY s.name]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>54</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.425Z">
+    <data name="cpu_time">
+      <value>15000</value>
+    </data>
+    <data name="duration">
+      <value>11083</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>24</value>
+    </data>
+    <data name="logical_reads">
+      <value>1979</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>10</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP (10) name, create_date FROM sys.all_objects ORDER BY name]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>52</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.446Z">
+    <data name="cpu_time">
+      <value>31000</value>
+    </data>
+    <data name="duration">
+      <value>40446</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>59</value>
+    </data>
+    <data name="logical_reads">
+      <value>928</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>1</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS ColumnCount FROM sys.columns]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>55</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.474Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>24669</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>16</value>
+    </data>
+    <data name="logical_reads">
+      <value>982</value>
+    </data>
+    <data name="writes">
+      <value>11</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>3</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS IndexCount FROM sys.indexes]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>55</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:51.509Z">
+    <data name="cpu_time">
+      <value>16000</value>
+    </data>
+    <data name="duration">
+      <value>88193</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>567</value>
+    </data>
+    <data name="logical_reads">
+      <value>2017</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>1</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS ParameterCount FROM sys.all_parameters]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>54</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-13T01:39:52.020Z">
+    <data name="cpu_time">
+      <value>390000</value>
+    </data>
+    <data name="duration">
+      <value>510050</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>1451</value>
+    </data>
+    <data name="logical_reads">
+      <value>209467</value>
+    </data>
+    <data name="writes">
+      <value>21</value>
+    </data>
+    <data name="spills">
+      <value>64</value>
+    </data>
+    <data name="row_count">
+      <value>5</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP (5) o.name AS ObjectName, COUNT(c.column_id) AS Columns FROM sys.all_objects AS o JOIN sys.all_columns AS c ON c.object_id = o.object_id GROUP BY o.name ORDER BY Columns DESC, o.name]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>54</value>
+    </action>
+  </event>
+</replay>

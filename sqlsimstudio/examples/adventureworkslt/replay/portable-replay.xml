@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="utf-8"?>
+<replay source="AdventureWorksLT sqlsim XEvent capture" server="localhost" generated="2026-10-09T15:57:39">
+  <!-- Genuine sql_batch_completed events captured from three concurrent sqlsim sessions. -->
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:28.699Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>100</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>5</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>1</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS CustomerCount FROM SalesLT.Customer]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>61</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:28.700Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>52</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>5</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>10</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP 10 ProductID, Name FROM SalesLT.Product ORDER BY ProductID]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>61</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:28.700Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>63</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>4</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>1</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS AddressCount FROM SalesLT.Address]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>61</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:28.889Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>1128</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>3</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>5</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP 5 SalesOrderID, SubTotal FROM SalesLT.SalesOrderHeader ORDER BY SubTotal DESC]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>67</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:28.890Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>445</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>105</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>41</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT pc.Name AS Category, COUNT(p.ProductID) AS Products FROM SalesLT.ProductCategory pc LEFT JOIN SalesLT.Product p ON p.ProductCategoryID = pc.ProductCategoryID GROUP BY pc.Name]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>67</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:28.890Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>93</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>4</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>1</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS DetailCount FROM SalesLT.SalesOrderDetail]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>67</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:29.057Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>84</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>2</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>10</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP 10 c.CustomerID, c.CompanyName FROM SalesLT.Customer c ORDER BY c.CustomerID]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>68</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:29.058Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>129</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>2</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>1</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT COUNT(*) AS ModelCount FROM SalesLT.ProductModel]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>68</value>
+    </action>
+  </event>
+  <event name="sql_batch_completed" package="sqlserver" timestamp="2026-10-09T20:57:29.061Z">
+    <data name="cpu_time">
+      <value>0</value>
+    </data>
+    <data name="duration">
+      <value>108</value>
+    </data>
+    <data name="page_server_reads">
+      <value>0</value>
+    </data>
+    <data name="physical_reads">
+      <value>0</value>
+    </data>
+    <data name="logical_reads">
+      <value>2</value>
+    </data>
+    <data name="writes">
+      <value>0</value>
+    </data>
+    <data name="spills">
+      <value>0</value>
+    </data>
+    <data name="row_count">
+      <value>5</value>
+    </data>
+    <data name="result">
+      <value>0</value>
+      <text><![CDATA[OK]]></text>
+    </data>
+    <data name="batch_text">
+      <value><![CDATA[SELECT TOP 5 a.City, a.StateProvince FROM SalesLT.Address a ORDER BY a.AddressID]]></value>
+    </data>
+    <action name="session_id" package="sqlserver">
+      <value>68</value>
+    </action>
+  </event>
+</replay>

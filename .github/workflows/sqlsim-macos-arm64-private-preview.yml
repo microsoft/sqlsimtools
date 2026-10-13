@@ -1,0 +1,58 @@
+name: sqlsim macOS ARM64 Private Preview
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/sqlsim-macos-arm64-private-preview.yml'
+      - 'sqlsim/**'
+      - 'release/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build-macos-arm64:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Confirm Apple Silicon runner
+        run: |
+          test "$(uname -s)" = "Darwin"
+          test "$(uname -m)" = "arm64"
+          sw_vers
+
+      - name: Install build prerequisites
+        run: brew install cmake unixodbc
+
+      - name: Build and test sqlsim
+        working-directory: sqlsim
+        run: |
+          bash ./build-macos.sh --clean
+          bash ./smoke-test-macos.sh --skip-build
+
+      - name: Stage archive
+        working-directory: sqlsim
+        run: |
+          bash ./publish-macos.sh --skip-build --release-dir '${{ runner.temp }}/stage/sqlsim'
+
+      - name: Validate staged package
+        shell: pwsh
+        run: |
+          ./release/validate-package-layout.ps1 `
+            -InstallRoot '${{ runner.temp }}/stage/sqlsim' `
+            -Tool sqlsim `
+            -SqlsimExecutable 'sqlsim/arm64/sqlsim'
+
+      - name: Create archive
+        run: |
+          tar -C '${{ runner.temp }}/stage/sqlsim' -czf '${{ runner.temp }}/sqlsim-macos-arm64-private-preview.tar.gz' .
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsim-macos-arm64-private-preview
+          path: ${{ runner.temp }}/sqlsim-macos-arm64-private-preview.tar.gz
+          if-no-files-found: error

@@ -1,0 +1,46 @@
+{
+    // DEMO workload -- sqlsim Studio Workload mode
+    //
+    // Runs on ANY SQL Server or Azure SQL database, including an empty one.
+    // Every query reads the system catalog or generates its own rows, so there
+    // is no dependency on a user schema, sample data, or table sizes.
+    //
+    // Import with the "Import JSON" button. Every group uses inline "queries"
+    // because Studio cannot read scripts referenced by file path and silently
+    // skips any group that only has a "file" property.
+    //
+    // Totals: 3 groups, 7 connections, 190 iterations.
+    "workloads": [
+        {
+            // Catalog read. Cheap and constant, so it keeps a steady execution
+            // rate visible in the monitor while the heavier group runs.
+            "queries": [
+                "SELECT TOP 100 o.name AS ObjectName, o.type_desc AS ObjectType, o.create_date AS CreatedUtc FROM sys.objects AS o ORDER BY o.name"
+            ],
+            "threads": 3,
+            "iterations": 50
+        },
+        {
+            // Metadata join across two catalog views, with think time so the
+            // group behaves like a user session rather than a tight loop.
+            "queries": [
+                "SELECT TOP 200 o.name AS TableName, c.name AS ColumnName, t.name AS DataType FROM sys.columns AS c INNER JOIN sys.objects AS o ON c.object_id = o.object_id INNER JOIN sys.types AS t ON c.user_type_id = t.user_type_id ORDER BY o.name, c.column_id",
+                "SELECT COUNT_BIG(*) AS ColumnCount FROM sys.columns"
+            ],
+            "threads": 2,
+            "iterations": 50,
+            "think_time_ms": 20
+        },
+        {
+            // Server-side CPU with no schema dependency. Roughly 1.2 seconds
+            // per execution on a developer laptop at MAXDOP 1; a Hyperscale
+            // service objective will differ, so check the first few progress
+            // events and adjust TOP if the rate is too fast or too slow.
+            "queries": [
+                "WITH Tens(n) AS (SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1 UNION ALL SELECT 1), Thousands(n) AS (SELECT 1 FROM Tens a CROSS JOIN Tens b CROSS JOIN Tens c), Billions(n) AS (SELECT 1 FROM Thousands a CROSS JOIN Thousands b CROSS JOIN Thousands c), Numbered AS (SELECT TOP 2000000 ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS Value FROM Billions) SELECT COUNT_BIG(*) AS RowsEvaluated, SUM(SQRT(ABS(CAST(Value AS float)) + 1)) AS Checksum FROM Numbered WHERE SQRT(ABS(CAST(Value AS float)) + 1) > 0.5 OPTION (MAXDOP 1)"
+            ],
+            "threads": 2,
+            "iterations": 25
+        }
+    ]
+}

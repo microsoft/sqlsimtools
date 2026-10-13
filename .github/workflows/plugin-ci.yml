@@ -1,0 +1,45 @@
+name: Agent Plugins CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.agents/plugins/**'
+      - '.claude-plugin/**'
+      - '.cursor-plugin/**'
+      - '.github/plugin/**'
+      - '.github/skills/**'
+      - '.github/workflows/plugin-ci.yml'
+      - 'plugins/**'
+      - 'scripts/sync-plugins.ps1'
+      - 'scripts/validate-plugins.ps1'
+      - 'README.md'
+  push:
+    branches: [main]
+    paths:
+      - '.agents/plugins/**'
+      - '.claude-plugin/**'
+      - '.cursor-plugin/**'
+      - '.github/plugin/**'
+      - '.github/skills/**'
+      - '.github/workflows/plugin-ci.yml'
+      - 'plugins/**'
+      - 'scripts/sync-plugins.ps1'
+      - 'scripts/validate-plugins.ps1'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check generated skill copies
+        shell: pwsh
+        run: .\scripts\sync-plugins.ps1 -Check
+      - name: Validate plugin distribution
+        shell: pwsh
+        run: .\scripts\validate-plugins.ps1

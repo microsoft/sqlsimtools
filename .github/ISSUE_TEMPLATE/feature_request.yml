@@ -1,0 +1,55 @@
+name: Feature request
+description: Propose a scoped change to an existing tool
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New workload simulators and open-ended design ideas belong in
+        [Ideas discussions](https://github.com/microsoft/sqlsimtools/discussions/categories/ideas)
+        first, so maintainers and users can refine the proposal. Use this form
+        once the change is scoped enough to track.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What can you not measure, automate, or express today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Describe the flag, output, or behavior you want, and how you would use it.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: tools
+    attributes:
+      label: Tools affected
+      options:
+        - label: sqlsim
+        - label: sqlpysim
+        - label: sqlsim Studio
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Does this change the CLI surface or JSON output?
+      description: The CLI and JSON output are the compatibility contract, so this determines the version bump.
+      options:
+        - No, internal behavior only
+        - Yes, adds a new flag or JSON field (backward compatible)
+        - Yes, changes or removes existing behavior (breaking)
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Existing flags, scripting workarounds, or other tools you tried first.

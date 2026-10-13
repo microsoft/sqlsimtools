@@ -1,0 +1,13 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sqlpysim",
+  "version": "1.0.0",
+  "description": "Guidance for running sqlsim-compatible SQL workloads from Python with Microsoft's native mssql-python driver.",
+  "author": {
+    "name": "Microsoft"
+  },
+  "homepage": "https://github.com/microsoft/sqlsimtools/tree/main/sqlpysim",
+  "repository": "https://github.com/microsoft/sqlsimtools",
+  "license": "MIT",
+  "keywords": ["sql-server", "azure-sql", "load-testing", "python", "mssql-python"]
+}

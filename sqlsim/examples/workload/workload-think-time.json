@@ -1,0 +1,30 @@
+{
+    // Test workload with think_time_ms — simulates application-tier delay between iterations.
+    // Works on any database (uses system catalog queries only).
+    "duration_seconds": 10,
+    "workloads": [
+        {
+            // Fast website users: 10ms think time between eligibility checks
+            "queries": [
+                "SELECT DB_NAME() AS DatabaseName, @@SPID AS SessionId, GETDATE() AS CheckTime"
+            ],
+            "threads": 4,
+            "think_time_ms": 10
+        },
+        {
+            // Slower internal ops: 50ms think time between report queries
+            "queries": [
+                "SELECT COUNT(*) AS SessionCount FROM sys.dm_exec_sessions WHERE is_user_process = 1"
+            ],
+            "threads": 2,
+            "think_time_ms": 50
+        },
+        {
+            // Tight-loop monitoring (no think time) — verifies default of 0 works alongside groups with think time
+            "queries": [
+                "SELECT 1 AS Heartbeat"
+            ],
+            "threads": 1
+        }
+    ]
+}

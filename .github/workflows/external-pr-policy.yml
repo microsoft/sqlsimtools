@@ -1,0 +1,59 @@
+name: External PR policy
+
+on:
+  pull_request_target:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  redirect-to-issues:
+    if: >-
+      github.event.pull_request.author_association != 'OWNER' &&
+      github.event.pull_request.author_association != 'MEMBER' &&
+      github.event.pull_request.author_association != 'COLLABORATOR' &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - name: Explain Public Preview policy and close pull request
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
+        with:
+          script: |
+            const marker = '<!-- sqlsimtools-public-preview-pr-policy -->';
+            const message = `${marker}
+            Thank you for your interest in sqlsimtools.
+
+            During Public Preview, this repository accepts bug reports, feature requests, questions, and proposed changes as [GitHub issues](https://github.com/microsoft/sqlsimtools/issues), but it does not accept external pull requests. Please open an issue with the problem or proposal so it can be discussed and tracked. This policy will be reconsidered after Public Preview.
+
+            Do not report security vulnerabilities in a public issue. Follow [SECURITY.md](https://github.com/microsoft/sqlsimtools/blob/main/SECURITY.md) to report them privately to the Microsoft Security Response Center.
+
+            This pull request is being closed automatically in accordance with the [contribution policy](https://github.com/microsoft/sqlsimtools/blob/main/CONTRIBUTING.md).`;
+
+            const parameters = {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            };
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { ...parameters, per_page: 100 }
+            );
+
+            if (!comments.some(comment => comment.body?.includes(marker))) {
+              await github.rest.issues.createComment({
+                ...parameters,
+                body: message
+              });
+            }
+
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              state: 'closed'
+            });

@@ -1,0 +1,66 @@
+{
+    // HEAVY tier -- sqlsim Studio Workload mode
+    // Requires AdventureWorksLT. Import with the "Import JSON" button.
+    //
+    // Six groups at high concurrency with a large execution count, plus two
+    // deliberately expensive groups. Use it for sustained load, connection
+    // pressure, and Monitor behavior over a long run.
+    //
+    // Raise the Query timeout above its 30 second default before running this
+    // tier. On Azure SQL Database, halve every "threads" value first: on a small
+    // service tier this measures throttling rather than client behavior.
+    //
+    // Totals: 6 groups, 46 connections, 15,150 iterations, 16,650 batches.
+    "workloads": [
+        {
+            // Highest-frequency group, drives the execution count.
+            "queries": [
+                "SELECT TOP 200 CustomerID, FirstName, LastName, CompanyName FROM SalesLT.Customer ORDER BY NEWID()"
+            ],
+            "threads": 16,
+            "iterations": 400
+        },
+        {
+            // Catalog scan with string work per row.
+            "queries": [
+                "SELECT p.ProductID, UPPER(p.Name) AS ProductName, p.ListPrice, CHECKSUM(p.Name, p.ProductNumber) AS ProductHash FROM SalesLT.Product p ORDER BY NEWID()"
+            ],
+            "threads": 10,
+            "iterations": 400
+        },
+        {
+            // Full order-line revenue pipeline.
+            "queries": [
+                "SELECT c.CompanyName, COUNT(DISTINCT soh.SalesOrderID) AS Orders, COUNT(sod.SalesOrderDetailID) AS LineItems, SUM(sod.OrderQty * sod.UnitPrice * (1 - sod.UnitPriceDiscount)) AS NetRevenue FROM SalesLT.Customer c INNER JOIN SalesLT.SalesOrderHeader soh ON c.CustomerID = soh.CustomerID INNER JOIN SalesLT.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID INNER JOIN SalesLT.Product p ON sod.ProductID = p.ProductID GROUP BY c.CompanyName ORDER BY NetRevenue DESC"
+            ],
+            "threads": 8,
+            "iterations": 300
+        },
+        {
+            // Address hashing, two batches per iteration.
+            "queries": [
+                "SELECT a.AddressID, a.City, a.StateProvince, HASHBYTES('MD5', a.AddressLine1 + a.City + a.StateProvince) AS AddressHash FROM SalesLT.Address a ORDER BY a.City",
+                "SELECT COUNT(*) AS AddressLinks FROM SalesLT.CustomerAddress"
+            ],
+            "threads": 6,
+            "iterations": 250,
+            "think_time_ms": 5
+        },
+        {
+            // Correlated subqueries evaluated per product row.
+            "queries": [
+                "SELECT p1.ProductID, p1.Name, p1.ListPrice, (SELECT COUNT(*) FROM SalesLT.Product p2 WHERE p2.ListPrice > p1.ListPrice) AS CheaperRank, (SELECT AVG(p3.ListPrice) FROM SalesLT.Product p3 WHERE p3.ProductCategoryID = p1.ProductCategoryID) AS CategoryAvg FROM SalesLT.Product p1 WHERE p1.ListPrice > 0 ORDER BY p1.ListPrice DESC"
+            ],
+            "threads": 4,
+            "iterations": 200
+        },
+        {
+            // The slow group. See medium-query.sql for how the tally CTE works.
+            "queries": [
+                "WITH L0 AS (SELECT 1 AS c UNION ALL SELECT 1), L1 AS (SELECT a.c FROM L0 a CROSS JOIN L0 b), L2 AS (SELECT a.c FROM L1 a CROSS JOIN L1 b), L3 AS (SELECT a.c FROM L2 a CROSS JOIN L2 b), L4 AS (SELECT a.c FROM L3 a CROSS JOIN L3 b), L5 AS (SELECT a.c FROM L4 a CROSS JOIN L4 b), Tally AS (SELECT TOP (10000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n FROM L5) SELECT COUNT_BIG(*) AS EvaluatedRows FROM SalesLT.Product p CROSS JOIN Tally t WHERE SQRT(ABS(CAST(p.ProductID AS float) * t.n) + 1) > 0.5 OPTION (MAXDOP 1)"
+            ],
+            "threads": 2,
+            "iterations": 25
+        }
+    ]
+}

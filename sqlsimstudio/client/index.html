@@ -1,0 +1,568 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>sqlsim Studio</title>
+  <link rel="icon" href="assets/sqlsim-icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="app-sidebar">
+      <div class="brand">
+        <div class="brand-mark" title="sqlsim Studio" aria-hidden="true"><img src="assets/sqlsim-icon.svg" alt=""></div>
+        <div class="brand-copy">
+          <strong>sqlsim Studio</strong>
+          <span class="product-stage" id="product-stage">Preview</span>
+        </div>
+      </div>
+      <nav class="view-tabs" aria-label="Primary views">
+        <button class="view-tab active" data-view="configure" data-tooltip="Configure" title="Configure"><span class="nav-icon"><i data-lucide="sliders-horizontal"></i></span><span class="nav-label">Configure</span></button>
+        <button class="view-tab" data-view="monitor" data-tooltip="Monitor" title="Monitor"><span class="nav-icon"><i data-lucide="activity"></i></span><span class="nav-label">Monitor</span><span class="live-dot hidden" id="nav-live-dot"></span></button>
+        <button class="view-tab" data-view="results" data-tooltip="Results" title="Results"><span class="nav-icon"><i data-lucide="chart-no-axes-combined"></i></span><span class="nav-label">Results</span></button>
+        <button class="view-tab" data-view="compare" data-tooltip="Compare" title="Compare"><span class="nav-icon"><i data-lucide="git-compare-arrows"></i></span><span class="nav-label">Compare</span></button>
+      </nav>
+      <div class="sidebar-foot">
+        <span>Workload engineering</span>
+        <small>Measure SQL under pressure.</small>
+      </div>
+    </aside>
+
+    <div class="app-main">
+    <header class="topbar">
+      <div class="topbar-context">
+        <strong>SQL workload engineering</strong>
+        <span>Design, run, monitor, and compare repeatable SQL workloads</span>
+      </div>
+      <div class="top-actions">
+        <span class="local-badge" id="runtime-status" title="The sqlsim Studio app is ready. SQL target status is shown when a workload runs."><span class="status-dot"></span><span>Studio ready</span></span>
+        <input class="hidden" id="configuration-file-input" type="file" accept=".json,application/json">
+        <button class="icon-button" id="load-profile" title="Load configuration" aria-label="Load a sqlsim Studio JSON configuration"><i data-lucide="folder-open"></i></button>
+        <button class="icon-button" id="save-profile" title="Save configuration" aria-label="Save this configuration as JSON"><i data-lucide="save"></i></button>
+        <button class="icon-button app-settings-button" id="open-app-settings" title="App settings" aria-label="Open app settings"><i data-lucide="settings"></i></button>
+        <button class="icon-button app-settings-button" id="shutdown-studio" title="Shut down sqlsim Studio" aria-label="Shut down sqlsim Studio"><i data-lucide="power"></i></button>
+      </div>
+    </header>
+
+    <main>
+      <section id="configure-view" class="view active">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">New run</p>
+            <h1>Configure workload</h1>
+            <p class="required-legend"><b class="required-mark" aria-hidden="true">*</b> Required fields</p>
+          </div>
+        </div>
+
+        <div class="configure-grid">
+          <section class="panel connection-panel">
+            <div class="panel-heading">
+              <span class="step-number">1</span>
+              <div><h2>Connection</h2><p>Target and authentication</p></div>
+            </div>
+
+            <div class="field-grid two-col">
+              <label class="field span-2">
+                <span>Execution engine <b class="required-mark" aria-hidden="true">*</b></span>
+                <select id="execution-engine" required>
+                  <option value="sqlsim">sqlsim · Native ODBC</option>
+                  <option value="sqlpysim">sqlpysim · mssql-python</option>
+                </select>
+              </label>
+              <div class="engine-note span-2" id="engine-note"><strong>Native engine</strong><span>Lowest client overhead · mixed workloads · query statistics · live monitoring</span></div>
+              <label class="field span-2">
+                <span>Server <b class="required-mark" aria-hidden="true">*</b></span>
+                <input id="server" value="localhost" required spellcheck="false">
+              </label>
+              <label class="field span-2">
+                <span>Database <b class="required-mark" aria-hidden="true">*</b></span>
+                <input id="database" placeholder="Enter database name" required spellcheck="false">
+              </label>
+              <label class="field span-2">
+                <span>Authentication <b class="required-mark" aria-hidden="true">*</b></span>
+                <select id="authentication" required>
+                  <option value="integrated">Windows / Kerberos integrated</option>
+                  <option value="token">Microsoft Entra token</option>
+                  <option value="interactive">Microsoft Entra interactive</option>
+                  <option value="managed">Managed identity</option>
+                  <option value="service-principal">Service principal</option>
+                  <option value="sql">SQL authentication</option>
+                </select>
+              </label>
+              <p id="authentication-note" class="field-note hidden"></p>
+              <label class="field auth-secret hidden span-2" id="username-field">
+                <span id="username-label">Username / client ID <b class="required-mark" aria-hidden="true">*</b></span>
+                <input id="auth-username" value="" autocomplete="off">
+              </label>
+              <label class="field auth-secret hidden span-2" id="secret-field">
+                <span id="secret-label">Password / token <b class="required-mark" aria-hidden="true">*</b></span>
+                <div class="password-wrap"><input id="auth-secret" type="password" value="" autocomplete="off"><button type="button" class="reveal" aria-label="Reveal secret">Show</button></div>
+              </label>
+            </div>
+
+            <details class="advanced">
+              <summary>Connection options</summary>
+              <div class="field-grid two-col detail-fields">
+                <label class="field"><span>Login timeout</span><div class="unit-input"><input id="login-timeout" type="number" min="0" max="86400" value="15"><span>sec</span></div></label>
+                <label class="field"><span>Application name</span><input id="application-name" maxlength="128" value="sqlsimstudio"></label>
+                <label class="field"><span>Encryption</span><select id="encryption"><option value="mandatory" selected>Mandatory</option><option value="strict">Strict</option><option value="optional">Optional</option><option value="default">Driver default</option></select></label>
+                <label class="field"><span>Retry count</span><input id="retry-count" type="number" min="0" max="255" value="0"></label>
+                <label class="check-field span-2"><input type="checkbox" id="trust-server-certificate" checked><span>Trust server certificate</span></label>
+                <label class="check-field span-2"><input id="read-only-intent" type="checkbox"><span>Read-only application intent</span></label>
+              </div>
+            </details>
+
+            <button class="button secondary full-width" id="test-connection"><i data-lucide="plug-zap"></i><span id="test-connection-label">Test connection</span></button>
+            <p id="test-connection-result" class="connection-test-result hidden"></p>
+          </section>
+
+          <section class="panel workload-panel">
+            <div class="panel-heading">
+              <span class="step-number">2</span>
+              <div><h2>Workload</h2><p>Query source and execution mix</p></div>
+            </div>
+
+            <div class="segmented" role="tablist" aria-label="Workload type">
+              <button data-mode="query">Query</button>
+              <button data-mode="file">SQL file</button>
+              <button class="active" data-mode="workload" id="workload-mode-button">Workload</button>
+              <button data-mode="replay" id="replay-mode-button">Replay</button>
+            </div>
+
+            <div id="query-mode" class="mode-panel hidden">
+              <label class="field"><span>SQL query <b class="required-mark" aria-hidden="true">*</b></span><textarea id="query-text" required spellcheck="false">SELECT @@VERSION;</textarea></label>
+              <div class="load-shape">
+                <div class="load-shape-heading"><strong>Load shape</strong><span class="batch-note">1 batch</span></div>
+                <div class="field-grid three-col">
+                  <label class="field"><span>Connections (<code class="cli-option">-n</code>) <b class="required-mark" aria-hidden="true">*</b></span><input class="simple-threads" type="number" min="1" value="10" required></label>
+                  <label class="field"><span>Iterations (<code class="cli-option">-r</code>) <b class="required-mark" aria-hidden="true">*</b></span><input class="simple-iterations" type="number" min="1" value="100" required></label>
+                  <div class="calculated-field"><span>Total executions</span><strong class="simple-total">0</strong></div>
+                </div>
+              </div>
+            </div>
+
+            <div id="file-mode" class="mode-panel hidden">
+              <input class="hidden" id="sql-file-input" type="file" accept=".sql,text/plain">
+              <div class="file-drop" id="sql-file-drop"><i data-lucide="file-code-2" class="drop-icon"></i><strong><span id="sql-file-title">Choose a SQL script</span> <b class="required-mark" aria-hidden="true">*</b></strong><span id="sql-file-detail">or drop a .sql file here · maximum 1 MB</span><button class="button secondary" id="browse-sql-file" type="button"><i data-lucide="folder-open"></i>Browse</button></div>
+              <div class="load-shape">
+                <div class="load-shape-heading"><strong>Load shape</strong><span class="batch-note" id="file-batch-note">Choose a script to count its batches</span></div>
+                <div class="field-grid three-col">
+                  <label class="field"><span>Connections (<code class="cli-option">-n</code>) <b class="required-mark" aria-hidden="true">*</b></span><input class="simple-threads" type="number" min="1" value="10" required></label>
+                  <label class="field"><span>Iterations (<code class="cli-option">-r</code>) <b class="required-mark" aria-hidden="true">*</b></span><input class="simple-iterations" type="number" min="1" value="100" required></label>
+                  <div class="calculated-field"><span>Total executions</span><strong class="simple-total" data-batches="1">0</strong></div>
+                </div>
+              </div>
+              <div class="sql-file-preview hidden" id="sql-file-preview">
+                <div class="load-shape-heading"><strong>Script preview</strong><span>Read-only</span></div>
+                <pre id="sql-file-preview-content"></pre>
+                <p class="hidden" id="sql-file-preview-overflow"></p>
+              </div>
+            </div>
+
+            <div id="workload-mode" class="mode-panel">
+              <input class="hidden" id="workload-file-input" type="file" accept=".sql,text/plain" multiple>
+              <div class="workload-toolbar">
+                <div><strong><span id="workload-group-count">No workload groups</span> <b class="required-mark" aria-hidden="true">*</b></strong><span id="workload-thread-count">Add one or more SQL scripts</span></div>
+                <div><input class="hidden" id="workload-json-input" type="file" accept=".json,application/json"><button class="text-button" id="import-workload-json" title="Import a sqlsim workload JSON definition"><i data-lucide="upload"></i>Import JSON</button><button class="button secondary small" id="add-group"><i data-lucide="plus"></i>Add group</button></div>
+              </div>
+
+              <div class="workload-table" id="workload-table">
+                <div class="workload-header"><span>Script</span><span>Connections <b class="required-mark" aria-hidden="true">*</b></span><span>Iterations <b class="required-mark" aria-hidden="true">*</b></span><span>Think time</span><span></span></div>
+                <div id="workload-rows"><div class="workload-empty">Select SQL scripts to create independently configured workload groups.</div></div>
+              </div>
+
+              <button class="add-script" id="add-script"><i data-lucide="file-plus-2"></i>Add SQL script</button>
+            </div>
+
+            <div id="replay-mode" class="mode-panel hidden">
+              <input class="hidden" id="replay-file-input" type="file" accept=".xml,text/xml,application/xml">
+              <div class="file-drop replay-drop" id="replay-file-drop"><i data-lucide="history" class="drop-icon"></i><strong><span id="replay-file-title">Choose a replay XML file</span> <b class="required-mark" aria-hidden="true">*</b></strong><span id="replay-file-detail">Converted sqlsim XEvent replay XML · maximum 100 MB</span><div class="replay-file-actions"><button class="button secondary" id="browse-replay-file" type="button"><i data-lucide="folder-open"></i>Browse</button></div></div>
+              <div class="replay-preflight hidden" id="replay-preflight" aria-live="polite">
+                <div class="replay-preflight-heading"><strong>Capture summary</strong><span id="replay-preflight-status">Valid converted replay XML</span></div>
+                <div class="replay-preflight-grid">
+                  <div><span>Captured events</span><strong id="replay-event-count">0</strong></div>
+                  <div><span>Recognized events</span><strong id="replay-recognized-count">0</strong></div>
+                  <div><span>Skipped events</span><strong id="replay-skipped-count">0</strong></div>
+                  <div><span>Captured SPIDs</span><strong id="replay-session-count">0</strong></div>
+                </div>
+                <p id="replay-database-summary">Database context: selected Studio target</p>
+                <p class="replay-database-warning">Studio validates the selected target connection, not schema or data equivalence. Ensure the target database is synchronized before interpreting performance comparisons.</p>
+                <div class="replay-capture-table" id="replay-capture-table">
+                  <div class="replay-capture-header"><span>Captured SQL</span><span>Type</span><span>Captured SPID</span><span>Database</span><span>Mode decision</span><span>Original duration</span></div>
+                </div>
+                <p class="hidden" id="replay-capture-overflow"></p>
+              </div>
+              <div class="load-shape replay-shape">
+                <div class="load-shape-heading"><strong>Replay behavior</strong><span>sqlsim native engine only</span></div>
+                <div class="field-grid three-col">
+                  <label class="field"><span>Mode <b class="required-mark" aria-hidden="true">*</b></span><select id="replay-mode-select" required><option value="fast">Session order (fast)</option><option value="stress">Load stress</option></select></label>
+                  <label class="field"><span>Replay passes (<code class="cli-option">-r</code>) <b class="required-mark" aria-hidden="true">*</b></span><input id="replay-iterations" type="number" min="1" value="1" required></label>
+                  <label class="field capability-disabled" id="replay-threads-field"><span>Stress connections (<code class="cli-option">-n</code>) <b class="required-mark" aria-hidden="true">*</b></span><input id="replay-threads" type="number" min="1" value="8" disabled></label>
+                </div>
+                <div class="replay-note" id="replay-note"><i data-lucide="route"></i><span>Session order creates one worker per captured session and runs each session as fast as possible while preserving its event order.</span></div>
+                <label class="replay-diagnostics"><input id="replay-diagnostics" type="checkbox"><span><strong>Collect per-query performance</strong><small>Compare Replay elapsed time, CPU, and reads with original XEvent metrics. Adds diagnostic overhead.</small></span></label>
+              </div>
+              <div class="replay-warning"><i data-lucide="shield-alert"></i><span><strong>Review replay data before use.</strong> XML can contain SQL text, object names, and literal values. Timestamps determine order, not pacing; transactions, think time, connection state, and session <code>SET</code> options are not reproduced.</span></div>
+            </div>
+          </section>
+
+          <section class="panel execution-panel">
+            <div class="panel-heading">
+              <span class="step-number">3</span>
+              <div><h2>Execution</h2><p>Behavior and output</p></div>
+            </div>
+
+            <div class="option-list">
+              <div class="telemetry-mode">
+                <label class="field">
+                  <span>Client telemetry <b class="required-mark" aria-hidden="true">*</b></span>
+                  <select id="telemetry-mode" required>
+                    <option value="live">Live progress</option>
+                    <option value="final">Final results only · maximum performance</option>
+                    <option value="console">Console output · show result rows</option>
+                  </select>
+                </label>
+                <p id="telemetry-note">Streams aggregate progress once per second while the workload runs.</p>
+              </div>
+              <label class="toggle-row capability-disabled" id="quiet-mode-row"><div><strong id="quiet-mode-title">Suppress result rows (<code class="cli-option">-q</code>)</strong><span id="quiet-mode-note">Required by structured JSON telemetry</span></div><input type="checkbox" class="toggle" id="quiet-mode-toggle" checked disabled></label>
+              <label class="toggle-row"><div><strong>Prepared statements</strong><span id="prepared-note">Prepare once per connection</span></div><input type="checkbox" class="toggle" id="prepared-statements"></label>
+              <label class="toggle-row"><div><strong>Reconnect each iteration</strong><span>Open a new connection per cycle</span></div><input type="checkbox" class="toggle" id="reconnect-each-iteration"></label>
+              <label class="toggle-row" id="pooling-row"><div><strong>Connection pooling</strong><span id="pooling-note">Requires reconnect</span></div><input type="checkbox" class="toggle" id="connection-pooling" disabled></label>
+              <label class="toggle-row"><div><strong>Stop on first error</strong><span>Cancel all active workers</span></div><input type="checkbox" class="toggle" id="stop-on-error"></label>
+              <div class="statistics-source" id="query-stats-row">
+                <label class="field">
+                  <span id="statistics-source-label">Studio server statistics</span>
+                  <select id="statistics-source">
+                    <option value="none">None</option>
+                    <option value="runtime">Runtime messages · per execution</option>
+                    <option value="query-store">Query Store · aggregate delta</option>
+                  </select>
+                </label>
+                <p id="statistics-source-note">Live monitoring remains available without server statistics.</p>
+                <div class="query-store-preflight hidden" id="query-store-preflight">
+                  <div><i data-lucide="database-zap"></i><span><strong>Collected by Studio</strong>Two read-only snapshots surround the workload run.</span></div>
+                  <ul>
+                    <li><i data-lucide="circle-check"></i>Query Store is read-write</li>
+                    <li><i data-lucide="circle-check"></i>Performance-state permission</li>
+                    <li><i data-lucide="triangle-alert"></i>Other sessions may affect totals</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div class="field-grid two-col compact-fields">
+              <label class="field"><span>Query timeout</span><div class="unit-input"><input id="query-timeout" type="number" min="0" max="86400" value="30"><span>sec</span></div></label>
+            </div>
+
+            <details class="advanced">
+              <summary>Advanced execution options</summary>
+              <div class="detail-fields">
+                <label class="check-field"><input id="multi-subnet-failover" type="checkbox"><span>Multi-subnet failover</span></label>
+                <label class="field"><span>Certificate hostname</span><input id="certificate-hostname" maxlength="253" placeholder="Optional"></label>
+              </div>
+            </details>
+
+            <div class="run-summary" id="run-summary">
+              <div><span id="execution-summary-label">Estimated executions</span><strong id="estimated-executions">0</strong></div>
+              <div><span id="connection-summary-label">Total connections</span><strong id="total-threads">0</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <div class="command-bar">
+          <div class="command-preview">
+            <span><i data-lucide="terminal"></i>Command preview</span>
+            <code id="command-text">sqlsim -S localhost -d &lt;database&gt; -E -workload &lt;private-temp&gt;/workload.json -stream-json -json -o studio-results.json -q</code>
+          </div>
+          <button class="button primary run-button" id="run-workload"><i data-lucide="play"></i><span id="run-label">Run workload</span></button>
+        </div>
+      </section>
+
+      <section id="monitor-view" class="view">
+        <div class="monitor-status">
+          <div class="run-state" aria-live="polite"><span class="pulse"></span><div><strong id="run-state-label">No active run</strong><span id="run-target">Database not selected</span></div></div>
+          <div class="elapsed"><span>Elapsed</span><strong id="elapsed-time">00:00:00</strong></div>
+          <button class="button secondary view-log" data-open-log><i data-lucide="scroll-text"></i><span>View log</span></button>
+          <button class="button danger" id="stop-run" disabled><i data-lucide="square"></i><span>Stop run</span></button>
+        </div>
+
+        <p class="run-detach-note hidden" id="run-detach-note"><i data-lucide="info"></i><span>Closing this tab will <strong>not</strong> stop this run. The workload keeps going against your database. Use <strong>Stop run</strong> to end it, or the power button to shut Studio down entirely.</span></p>
+
+        <section class="panel no-live-monitor hidden" id="no-live-monitor">
+          <i data-lucide="gauge"></i>
+          <div><h2 id="no-live-monitor-title">Maximum-performance run in progress</h2><p id="no-live-monitor-note">Studio is showing run state and elapsed time only. When the run finishes, choose View results for the final statistics.</p></div>
+        </section>
+
+        <div class="monitor-grid" id="live-monitor-content">
+          <section class="metric-hero">
+            <div class="metric-heading"><div><p class="eyebrow">Live throughput</p><div><strong id="throughput-value">0</strong><span>exec/sec</span></div></div><div class="metric-secondary hidden" id="avg-duration-block"><p class="eyebrow">Measured avg duration</p><div><strong id="avg-duration-value">--</strong><span id="avg-duration-unit">ms</span></div></div></div>
+            <p class="awaiting-note hidden" id="awaiting-first-result">No executions have completed yet. The engine counts an execution only when it finishes, so a query slower than one second reports nothing until the first result lands.</p>
+            <canvas id="throughput-chart" height="180" aria-label="Throughput over time"></canvas>
+            <div class="chart-axis"><span>20 sec ago</span><span>now</span></div>
+          </section>
+
+          <section class="metrics-strip">
+            <div class="metric-box"><span>Executions</span><strong id="execution-count">0</strong><small id="execution-target">Awaiting telemetry</small></div>
+            <div class="metric-box"><span>Connections</span><strong id="connection-count">0</strong><small id="connection-detail">Awaiting telemetry</small></div>
+            <button class="metric-box metric-button" data-open-log><span>Errors</span><strong class="success-text" id="error-count">0</strong><small>View execution log</small></button>
+            <div class="metric-box"><span>Failed connections</span><strong id="failed-connection-count">0</strong><small>Reported by engine</small></div>
+          </section>
+
+          <section class="panel progress-panel">
+            <div class="section-title"><div><h2>Workload progress</h2><p>Aggregate execution progress reported by the engine</p></div><strong id="percent-complete">0%</strong></div>
+            <div class="overall-progress"><span id="overall-progress-bar"></span></div>
+            <div class="progress-table">
+              <div class="progress-row"><div><strong id="progress-label">Current run</strong><span id="progress-threads">Awaiting engine start</span></div><div class="mini-progress"><span id="aggregate-progress-bar"></span></div><strong id="progress-count">0 / 0</strong><span class="ok" id="progress-errors">0 errors</span></div>
+            </div>
+          </section>
+
+          <section class="panel live-query-panel" id="live-query-panel">
+            <div class="section-title"><div><h2>Live query statistics</h2><p id="live-query-subtitle">Per-query diagnostics from periodic engine snapshots</p></div><span class="source-badge diagnostic">-querystats-interval</span></div>
+            <div class="workload-empty" id="live-query-empty">Enable Collect per-query performance to see live per-query statistics.</div>
+            <div class="hidden" id="live-query-content">
+              <div class="query-stat-summary" id="live-query-summary"></div>
+              <div class="query-report-table" id="live-query-table">
+                <div class="query-report-header"><span>Query</span><span>Executions</span><span>SPIDs</span><span>Avg elapsed</span><span>Avg CPU</span><span>Logical reads</span><span>Failures</span></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel events-panel">
+            <div class="section-title"><div><h2>Event stream</h2><p>Structured events received from sqlsim</p></div></div>
+            <div class="event-table" id="event-table"><div class="workload-empty" id="event-empty">Awaiting structured events.</div></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="results-view" class="view">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">Completed run</p>
+            <h1>Workload results</h1>
+            <p class="result-subtitle" id="result-subtitle">No completed run</p>
+          </div>
+          <div class="heading-actions">
+            <button class="button secondary" id="export-results-json" title="Download the canonical sqlsim results JSON"><i data-lucide="download"></i>Export JSON</button>
+
+            <button class="button primary" id="compare-result"><i data-lucide="git-compare-arrows"></i>Compare run</button>
+          </div>
+        </div>
+
+        <div class="result-status success-result"><span class="result-check"><i data-lucide="check"></i></span><div><strong id="result-status-title">No completed run</strong><span id="result-status-detail">Run a workload to populate results</span></div><button class="text-button" data-open-log><i data-lucide="scroll-text"></i>View log</button></div>
+
+        <section class="result-metrics" id="result-metrics">
+          <div><span>Throughput</span><strong id="result-throughput">0</strong><small>executions/sec</small></div>
+          <div><span>Total duration</span><strong id="result-runtime">0.000</strong><small>seconds</small></div>
+          <div><span>Executions</span><strong id="result-executions">0</strong><small id="result-success-detail">Awaiting run</small></div>
+          <div><span>Avg duration</span><strong id="result-avg-duration">--</strong><small id="result-avg-duration-detail">per execution</small></div>
+          <div><span>Connections</span><strong id="result-connections">0</strong><small id="result-connection-detail">Awaiting run</small></div>
+          <div><span>Errors</span><strong class="success-text" id="result-errors">0</strong><small id="result-warning-detail">0 warnings</small></div>
+        </section>
+
+        <div class="results-grid">
+          <section class="panel result-chart-panel" id="result-timing-panel">
+            <div class="section-title"><div><h2>Execution summary</h2><p id="result-timing-subtitle">Client-observed timing from final JSON output</p></div><span class="source-badge" id="result-timing-source">-json -v</span></div>
+            <div class="timing-bars">
+              <div class="timing-row"><span>Query execution</span><div><i id="result-query-time-bar" style="width:0%"></i></div><strong id="result-query-time-detail">0.000 s</strong></div>
+              <div class="timing-row"><span>Connection</span><div><i id="result-connection-time-bar" style="width:0%"></i></div><strong id="result-connection-time-detail">0.000 s</strong></div>
+              <div class="timing-row"><span>Other</span><div><i id="result-other-time-bar" style="width:0%"></i></div><strong id="result-other-time-detail">0.000 s</strong></div>
+            </div>
+          </section>
+
+          <section class="panel run-config-panel" id="result-config-panel">
+            <div class="section-title"><div><h2>Run configuration</h2><p>Reproducibility details</p></div></div>
+            <dl class="config-list">
+              <div><dt>Workload</dt><dd id="result-config-workload">Awaiting run</dd></div>
+              <div><dt>Groups / batches</dt><dd id="result-config-shape">0</dd></div>
+              <div><dt>Connections</dt><dd id="result-config-connections">0</dd></div>
+              <div><dt>Query statistics</dt><dd id="result-config-statistics">Not collected</dd></div>
+              <div><dt>ODBC driver</dt><dd id="result-config-driver">Unknown</dd></div>
+              <div><dt>Engine</dt><dd id="result-config-engine">Unknown</dd></div>
+              <div><dt>SQL Server</dt><dd id="result-config-server">Not recorded</dd></div>
+            </dl>
+          </section>
+
+          <section class="panel console-output-panel hidden" id="result-console-panel">
+            <div class="section-title"><div><h2>Console output</h2><p>Raw sqlsim output, including result rows</p></div><span class="source-badge">stdout</span></div>
+            <pre id="result-console-output"></pre>
+            <p class="console-output-note hidden" id="result-console-truncated">Output was truncated at the Studio 256 KiB display limit.</p>
+          </section>
+
+          <section class="panel query-report-panel hidden" id="result-statistics-panel">
+            <div class="section-title"><div><h2 id="result-statistics-title">Query statistics</h2><p id="result-statistics-subtitle">Server CPU and I/O diagnostics captured for this run</p></div><span class="source-badge diagnostic" id="result-statistics-source">-querystats</span></div>
+            <div class="query-stat-summary hidden" id="result-query-summary"></div>
+            <div class="query-report-table" id="query-report-table">
+              <div class="query-report-header"><span>Query</span><span>Executions</span><span>SPIDs</span><span>Avg elapsed</span><span>Avg CPU</span><span>Logical reads</span><span>Failures</span></div>
+            </div>
+          </section>
+
+          <section class="panel replay-comparison-panel hidden" id="result-replay-comparison-panel">
+            <div class="section-title"><div><h2>Original capture vs Replay</h2><p id="result-replay-comparison-subtitle">Exact SQL-text matches from the converted XEvent capture</p></div><span class="source-badge diagnostic">XEvent + -querystats</span></div>
+            <div class="replay-outcome-grid">
+              <div><span>Original outcomes</span><strong id="replay-original-outcomes">—</strong></div>
+              <div><span>Replay outcomes</span><strong id="replay-result-outcomes">—</strong></div>
+              <div><span>Mode</span><strong id="replay-result-mode">—</strong></div>
+            </div>
+            <div class="replay-comparison-table" id="replay-comparison-table">
+              <div class="replay-comparison-header"><span>Query</span><span>Executions</span><span>Original avg</span><span>Replay avg</span><span>Elapsed delta</span><span>Reads delta</span><span>Failures</span></div>
+            </div>
+            <p class="replay-comparison-note" id="replay-comparison-note"></p>
+          </section>
+        </div>
+      </section>
+
+      <section id="compare-view" class="view">
+        <div class="workspace-heading">
+          <div>
+            <p class="eyebrow">A/B analysis</p>
+            <h1>Compare runs</h1>
+            <p class="result-subtitle">Compare final-result runs from this session or saved JSON result files</p>
+          </div>
+          <div class="heading-actions">
+            <button class="button secondary" id="export-comparison" title="Export both runs and the computed comparison"><i data-lucide="download"></i>Export comparison</button>
+          </div>
+        </div>
+
+        <section class="comparison-picker panel">
+          <div class="run-picker baseline-picker">
+            <div class="run-picker-heading"><span class="comparison-label">A · Baseline</span><button class="text-button" id="import-baseline-result" title="Import a saved JSON result as the baseline"><i data-lucide="upload"></i>Import JSON</button></div>
+            <select id="baseline-run" disabled><option>Run or import two final results</option></select>
+            <div><span id="baseline-summary">No baseline selected</span><strong id="baseline-throughput">0 exec/sec</strong></div>
+          </div>
+          <button class="swap-button" id="swap-runs" title="Swap baseline and candidate" aria-label="Swap baseline and candidate"><i data-lucide="arrow-left-right"></i></button>
+          <div class="run-picker candidate-picker">
+            <div class="run-picker-heading"><span class="comparison-label">B · Candidate</span><button class="text-button" id="import-candidate-result" title="Import a saved JSON result as the candidate"><i data-lucide="upload"></i>Import JSON</button></div>
+            <select id="candidate-run" disabled><option>Run or import two final results</option></select>
+            <div><span id="candidate-summary">No candidate selected</span><strong id="candidate-throughput">0 exec/sec</strong></div>
+          </div>
+          <input class="hidden" id="comparison-result-input" type="file" accept=".json,application/json">
+        </section>
+
+        <div class="comparison-valid invalid" id="comparison-status"><span id="comparison-status-icon"><i data-lucide="circle-alert"></i></span><div><strong id="comparison-status-title">Two final-result runs required</strong><span id="comparison-status-detail">Run Final results only workloads or import saved -json result files.</span></div><button class="text-button hidden" id="show-differences"><i data-lucide="list-tree"></i>View configuration</button></div>
+
+        <div class="workload-empty" id="comparison-empty">Run the same workload twice using Final results only, or import two saved result files, to create a valid A/B comparison.</div>
+
+        <div class="hidden" id="comparison-analysis">
+          <section class="delta-grid">
+            <div class="delta-card" id="delta-throughput"><span>Throughput</span><div><strong>0.0%</strong><small>higher is better</small></div><p><b>0</b><i>&rarr;</i><b>0 exec/sec</b></p></div>
+            <div class="delta-card" id="delta-runtime"><span>Total duration</span><div><strong>0.0%</strong><small>lower is better</small></div><p><b>0.000 s</b><i>&rarr;</i><b>0.000 s</b></p></div>
+            <div class="delta-card" id="delta-execution"><span>Avg. execution</span><div><strong>0.0%</strong><small>lower is better</small></div><p><b>0.000 ms</b><i>&rarr;</i><b>0.000 ms</b></p></div>
+            <div class="delta-card" id="delta-connection"><span>Avg. connection</span><div><strong>0.0%</strong><small>lower is better</small></div><p><b>0.00 ms</b><i>&rarr;</i><b>0.00 ms</b></p></div>
+            <div class="delta-card" id="delta-errors"><span>Errors</span><div><strong>No change</strong><small>lower is better</small></div><p><b>0</b><i>&rarr;</i><b>0</b></p></div>
+          </section>
+
+          <div class="compare-grid">
+          <section class="panel comparison-chart-panel">
+            <div class="section-title"><div><h2>Metric comparison</h2><p>Normalized candidate change from baseline</p></div><div class="legend"><span class="legend-a"></span>A baseline <span class="legend-b"></span>B candidate</div></div>
+            <div class="comparison-bars">
+              <div class="comparison-bar-row" data-comparison-metric="throughput"><span>Throughput</span><div><i class="bar-a" style="width:0%"></i><i class="bar-b" style="width:0%"></i></div><strong>0.0%</strong></div>
+              <div class="comparison-bar-row" data-comparison-metric="runtime"><span>Total duration</span><div><i class="bar-a" style="width:0%"></i><i class="bar-b" style="width:0%"></i></div><strong>0.0%</strong></div>
+              <div class="comparison-bar-row" data-comparison-metric="execution"><span>Avg execution</span><div><i class="bar-a" style="width:0%"></i><i class="bar-b" style="width:0%"></i></div><strong>0.0%</strong></div>
+              <div class="comparison-bar-row" data-comparison-metric="connection"><span>Avg connection</span><div><i class="bar-a" style="width:0%"></i><i class="bar-b" style="width:0%"></i></div><strong>0.0%</strong></div>
+              <div class="comparison-bar-row" data-comparison-metric="errors"><span>Errors</span><div><i class="bar-a" style="width:0%"></i><i class="bar-b" style="width:0%"></i></div><strong>0.0%</strong></div>
+            </div>
+          </section>
+
+          <section class="panel verdict-panel">
+            <p class="eyebrow">Comparison verdict</p>
+            <h2 id="comparison-verdict-title">Awaiting comparable runs</h2>
+            <p id="comparison-verdict-detail">Select a baseline and candidate to calculate measured changes.</p>
+            <div class="verdict-rule"><span></span><strong id="comparison-improved">0 improved</strong><strong id="comparison-unchanged">0 unchanged</strong><strong id="comparison-regressed">0 regressed</strong></div>
+          </section>
+
+          <section class="panel config-diff-panel hidden" id="config-differences">
+            <div class="section-title"><div><h2>Configuration comparison</h2><p>Guardrails against invalid A/B conclusions</p></div></div>
+            <div class="config-diff-table">
+              <div><strong>Setting</strong><strong>A · Baseline</strong><strong>B · Candidate</strong><strong>Status</strong></div>
+              <div><span>Workload checksum</span><code id="config-workload-a">-</code><code id="config-workload-b">-</code><span class="ok">Match</span></div>
+              <div><span>Target</span><code id="config-target-a">-</code><code id="config-target-b">-</code><span class="ok">Match</span></div>
+              <div><span>Connections / iterations</span><code id="config-load-a">-</code><code id="config-load-b">-</code><span class="ok">Match</span></div>
+              <div><span>Statistics</span><code id="config-statistics-a">-</code><code id="config-statistics-b">-</code><span class="ok">Match</span></div>
+              <div><span>Telemetry</span><code id="config-telemetry-a">-</code><code id="config-telemetry-b">-</code><span class="ok">Match</span></div>
+              <div><span>Engine</span><code id="config-engine-a">-</code><code id="config-engine-b">-</code><span class="ok" id="config-engine-status">Match</span></div>
+              <div><span>ODBC driver</span><code id="config-driver-a">-</code><code id="config-driver-b">-</code><span class="ok" id="config-driver-status">Match</span></div>
+              <div><span>SQL Server version</span><code id="config-version-a">-</code><code id="config-version-b">-</code><span class="ok" id="config-version-status">Match</span></div>
+              <div><span>SQL Server edition</span><code id="config-edition-a">-</code><code id="config-edition-b">-</code><span class="ok" id="config-edition-status">Match</span></div>
+            </div>
+          </section>
+          </div>
+
+          <section class="panel query-comparison-panel" id="query-comparison-panel">
+            <div class="section-title"><div><h2>Per-query comparison</h2><p id="query-comparison-subtitle">Queries matched by SQL text. Changes within ±2% are treated as unchanged.</p></div></div>
+            <div class="workload-empty hidden" id="query-comparison-empty">Collect per-query statistics in both runs to compare individual queries.</div>
+            <div class="query-report-table" id="query-comparison-table">
+              <div class="query-comparison-header"><span>Query</span><span>Executions</span><span>Avg elapsed</span><span>Avg CPU</span><span>Logical reads</span><span>Failures</span></div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+    </div>
+
+    <dialog class="app-settings-dialog" id="app-settings-dialog" aria-labelledby="app-settings-title">
+      <div class="settings-header">
+        <div><p class="eyebrow">Studio preferences</p><h2 id="app-settings-title">App settings</h2></div>
+        <button class="icon-button" id="close-app-settings" title="Close settings" aria-label="Close app settings"><i data-lucide="x"></i></button>
+      </div>
+      <div class="settings-content">
+        <label class="field">
+          <span>Theme</span>
+          <select id="app-theme">
+            <option value="system">Use system setting</option>
+            <option value="light">Light</option>
+            <option value="dark">Dark</option>
+            <option value="blue">Blue</option>
+            <option value="red-blue">Red &amp; Blue</option>
+            <option value="royal-blue">Royal Blue</option>
+            <option value="green">Green</option>
+            <option value="green-black">Green &amp; Black</option>
+            <option value="green-gold">Green &amp; Gold</option>
+          </select>
+        </label>
+        <p class="settings-note">Applies only to sqlsim Studio on this browser. It does not change sqlsim workload settings.</p>
+      </div>
+      <div class="settings-actions">
+        <button class="button secondary" id="cancel-app-settings" type="button">Cancel</button>
+        <button class="button primary" id="apply-app-settings" type="button">OK</button>
+      </div>
+    </dialog>
+
+    <dialog class="app-settings-dialog" id="shutdown-dialog" aria-labelledby="shutdown-title">
+      <div class="settings-header">
+        <div><p class="eyebrow">End this session</p><h2 id="shutdown-title">Shut down sqlsim Studio</h2></div>
+        <button class="icon-button" id="close-shutdown" title="Cancel" aria-label="Cancel shutdown"><i data-lucide="x"></i></button>
+      </div>
+      <div class="settings-content">
+        <p class="settings-note" id="shutdown-detail"><strong>Any running workload will be terminated.</strong> Studio stops the sqlsim or sqlpysim process it started, closes every connection that process holds open on your database, deletes this session's temporary files, and exits. This page will stop working.</p>
+        <p class="settings-note hidden" id="shutdown-run-warning"><strong>A workload is running right now.</strong> It will be stopped part-way through, and partial results are not kept.</p>
+      </div>
+      <div class="settings-actions">
+        <button class="button secondary" id="cancel-shutdown" type="button">Cancel</button>
+        <button class="button primary" id="confirm-shutdown" type="button">Shut down</button>
+      </div>
+    </dialog>
+
+    <div class="drawer-backdrop hidden" id="drawer-backdrop"></div>
+    <aside class="log-drawer hidden" id="log-drawer" aria-labelledby="log-title">
+      <div class="log-header">
+        <div><p class="eyebrow">Current run</p><h2 id="log-title">Execution log</h2></div>
+        <button class="icon-button" id="close-log" title="Close log" aria-label="Close log"><i data-lucide="x"></i></button>
+      </div>
+      <div class="log-security"><i data-lucide="shield-check"></i><span><strong>Sanitized · session only</strong>Credentials and tokens are never recorded. Logs are discarded when Studio closes.</span></div>
+      <div class="log-toolbar">
+        <div class="log-filters" role="group" aria-label="Log severity">
+          <button class="active" data-log-filter="all">All</button>
+          <button data-log-filter="error">Errors <b>0</b></button>
+          <button data-log-filter="warning">Warnings <b>0</b></button>
+        </div>
+      </div>
+      <div class="log-entries" id="log-entries"></div>
+      <div class="log-footer"><span>0 entries</span></div>
+    </aside>
+    <div class="toast hidden" id="toast"></div>
+  </div>
+  <script src="vendor/lucide.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

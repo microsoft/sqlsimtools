@@ -1,0 +1,12 @@
+{
+  "name": "sqlpysim",
+  "displayName": "sqlpysim",
+  "version": "1.0.0",
+  "description": "Guidance for running sqlsim-compatible SQL workloads from Python with Microsoft's native mssql-python driver.",
+  "author": {
+    "name": "Microsoft"
+  },
+  "repository": "https://github.com/microsoft/sqlsimtools",
+  "keywords": ["sql-server", "azure-sql", "load-testing", "python", "mssql-python"],
+  "skills": "skills/"
+}

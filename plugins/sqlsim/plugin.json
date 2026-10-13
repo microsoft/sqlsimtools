@@ -1,0 +1,13 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "sqlsim",
+  "version": "1.0.0",
+  "description": "Guidance for running SQL queries, scripts, load tests, and measured multi-threaded workloads with the native sqlsim CLI.",
+  "author": {
+    "name": "Microsoft"
+  },
+  "homepage": "https://github.com/microsoft/sqlsimtools/tree/main/sqlsim",
+  "repository": "https://github.com/microsoft/sqlsimtools",
+  "license": "MIT",
+  "keywords": ["sql-server", "azure-sql", "load-testing", "benchmarking", "odbc"]
+}

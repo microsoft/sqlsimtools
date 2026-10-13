@@ -1,0 +1,41 @@
+{
+    // LIGHT tier -- sqlsim Studio Workload mode
+    // Requires AdventureWorksLT. Import with the "Import JSON" button.
+    //
+    // Three groups of small reads at low concurrency. Every group uses inline
+    // queries because Studio cannot read scripts referenced by file path and
+    // silently skips any group that only has a "file" property.
+    //
+    // duration_seconds is deliberately absent: sqlsim honors it, Studio ignores
+    // it and reports that it did.
+    //
+    // Totals: 3 groups, 7 connections, 350 iterations, 450 batches.
+    "workloads": [
+        {
+            // Customer lookup, the most common OLTP shape in this sample.
+            "queries": [
+                "SELECT TOP 100 CustomerID, FirstName, LastName, CompanyName FROM SalesLT.Customer ORDER BY CustomerID"
+            ],
+            "threads": 3,
+            "iterations": 50
+        },
+        {
+            // Catalog read with a category join.
+            "queries": [
+                "SELECT p.ProductID, p.Name, p.ListPrice, pc.Name AS Category FROM SalesLT.Product p INNER JOIN SalesLT.ProductCategory pc ON p.ProductCategoryID = pc.ProductCategoryID ORDER BY p.ListPrice DESC"
+            ],
+            "threads": 2,
+            "iterations": 50
+        },
+        {
+            // Two batches in one group, with think time between iterations.
+            "queries": [
+                "SELECT COUNT(*) AS OrderCount FROM SalesLT.SalesOrderHeader",
+                "SELECT COUNT(*) AS LineCount FROM SalesLT.SalesOrderDetail"
+            ],
+            "threads": 2,
+            "iterations": 50,
+            "think_time_ms": 10
+        }
+    ]
+}

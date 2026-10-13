@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Source-only test fixture with captured XEvent metrics. -->
+<replay source="sqlsim Studio comparison test fixture">
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.000Z">
+    <data name="cpu_time"><value>0</value></data>
+    <data name="duration"><value>205</value></data>
+    <data name="physical_reads"><value>0</value></data>
+    <data name="logical_reads"><value>0</value></data>
+    <data name="writes"><value>0</value></data>
+    <data name="row_count"><value>1</value></data>
+    <data name="result"><value>0</value></data>
+    <data name="batch_text"><value>SELECT @@VERSION</value></data>
+    <action name="session_id"><value>101</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.100Z">
+    <data name="cpu_time"><value>0</value></data>
+    <data name="duration"><value>807</value></data>
+    <data name="physical_reads"><value>0</value></data>
+    <data name="logical_reads"><value>98</value></data>
+    <data name="writes"><value>0</value></data>
+    <data name="row_count"><value>12</value></data>
+    <data name="result"><value>0</value></data>
+    <data name="batch_text"><value>SELECT name, database_id FROM sys.databases</value></data>
+    <action name="session_id"><value>101</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.200Z">
+    <data name="cpu_time"><value>0</value></data>
+    <data name="duration"><value>97</value></data>
+    <data name="physical_reads"><value>0</value></data>
+    <data name="logical_reads"><value>0</value></data>
+    <data name="writes"><value>0</value></data>
+    <data name="row_count"><value>1</value></data>
+    <data name="result"><value>0</value></data>
+    <data name="batch_text"><value>SELECT @@SERVERNAME</value></data>
+    <action name="session_id"><value>102</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.300Z">
+    <data name="cpu_time"><value>0</value></data>
+    <data name="duration"><value>769</value></data>
+    <data name="physical_reads"><value>0</value></data>
+    <data name="logical_reads"><value>101</value></data>
+    <data name="writes"><value>0</value></data>
+    <data name="row_count"><value>12</value></data>
+    <data name="result"><value>0</value></data>
+    <data name="batch_text"><value>SELECT name, database_id FROM sys.databases</value></data>
+    <action name="session_id"><value>102</value></action>
+  </event>
+</replay>

@@ -1,0 +1,45 @@
+{
+    // MEDIUM tier -- sqlsim Studio Workload mode
+    // Requires AdventureWorksLT. Import with the "Import JSON" button.
+    //
+    // Four groups that mix cheap reads with analytic queries and one group
+    // holding a deliberately expensive batch, so the run has both a high
+    // execution count and executions long enough to span progress ticks.
+    //
+    // Totals: 4 groups, 14 connections, 1,150 iterations, 1,150 batches.
+    "workloads": [
+        {
+            // High-frequency point reads.
+            "queries": [
+                "SELECT TOP 100 CustomerID, FirstName, LastName FROM SalesLT.Customer ORDER BY CustomerID"
+            ],
+            "threads": 6,
+            "iterations": 100
+        },
+        {
+            // Four-table revenue aggregation across every order line.
+            "queries": [
+                "SELECT c.CompanyName, COUNT(DISTINCT soh.SalesOrderID) AS Orders, SUM(sod.OrderQty * sod.UnitPrice * (1 - sod.UnitPriceDiscount)) AS NetRevenue FROM SalesLT.Customer c INNER JOIN SalesLT.SalesOrderHeader soh ON c.CustomerID = soh.CustomerID INNER JOIN SalesLT.SalesOrderDetail sod ON soh.SalesOrderID = sod.SalesOrderID INNER JOIN SalesLT.Product p ON sod.ProductID = p.ProductID GROUP BY c.CompanyName ORDER BY NetRevenue DESC"
+            ],
+            "threads": 4,
+            "iterations": 75
+        },
+        {
+            // Window functions over the order header.
+            "queries": [
+                "SELECT soh.SalesOrderID, soh.CustomerID, soh.SubTotal, SUM(soh.SubTotal) OVER () AS GrandTotal, ROW_NUMBER() OVER (ORDER BY soh.SubTotal DESC) AS RevenueRank FROM SalesLT.SalesOrderHeader soh ORDER BY soh.SubTotal DESC"
+            ],
+            "threads": 3,
+            "iterations": 75,
+            "think_time_ms": 25
+        },
+        {
+            // The slow group. See medium-query.sql for how the tally CTE works.
+            "queries": [
+                "WITH L0 AS (SELECT 1 AS c UNION ALL SELECT 1), L1 AS (SELECT a.c FROM L0 a CROSS JOIN L0 b), L2 AS (SELECT a.c FROM L1 a CROSS JOIN L1 b), L3 AS (SELECT a.c FROM L2 a CROSS JOIN L2 b), L4 AS (SELECT a.c FROM L3 a CROSS JOIN L3 b), L5 AS (SELECT a.c FROM L4 a CROSS JOIN L4 b), Tally AS (SELECT TOP (4000) ROW_NUMBER() OVER (ORDER BY (SELECT NULL)) AS n FROM L5) SELECT COUNT_BIG(*) AS EvaluatedRows FROM SalesLT.Product p CROSS JOIN Tally t WHERE SQRT(ABS(CAST(p.ProductID AS float) * t.n) + 1) > 0.5 OPTION (MAXDOP 1)"
+            ],
+            "threads": 1,
+            "iterations": 25
+        }
+    ]
+}

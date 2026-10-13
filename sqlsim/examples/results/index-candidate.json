@@ -1,0 +1,82 @@
+{
+  "version": "1.0.0",
+  "start_time": "2026-10-12T12:57:58.298",
+  "configuration": {
+  "odbc_driver": "ODBC Driver 18 for SQL Server",
+  "server": "localhost",
+  "database": "AdventureWorksLT",
+  "authentication": "Windows",
+  "threads": 8,
+  "iterations_per_thread": 1000,
+  "total_batches": 8000,
+  "batch_count": 1,
+    "batches": [
+      "SELECT CustomerID, FirstName, LastName FROM SalesLT.Customer WHERE CompanyName = N'Friendly Bike Shop';"
+    ],
+  "application_name": "sqlsim",
+  "retry_count": 0,
+  "trust_server_certificate": true,
+  "quiet_mode": true,
+  "query_stats": true
+  },
+  "query_stats": {
+    "queries": [
+      {
+        "query": "SELECT CustomerID, FirstName, LastName FROM SalesLT.Customer WHERE CompanyName = N'Friendly Bike Shop';",
+        "spids": [70, 72, 73, 74, 76, 77, 78, 79],
+        "spid_count": 8,
+        "total_elapsed_ms": {"avg": 0.353, "min": 0.130, "max": 16.988},
+        "server_elapsed_ms": {"avg": 0.002, "min": 0.000, "max": 2.000},
+        "server_cpu_ms": {"avg": 0.000, "min": 0.000, "max": 0.000},
+        "server_elapsed_sum_ms": {"avg": 0.002, "min": 0.000, "max": 2.000},
+        "server_cpu_sum_ms": {"avg": 0.000, "min": 0.000, "max": 0.000},
+        "compile_elapsed_ms": {"avg": 0.002, "min": 0.000, "max": 15.000},
+        "logical_reads": {"avg": 2.0, "min": 2, "max": 2},
+        "physical_reads": {"avg": 0.0, "min": 0, "max": 0},
+        "read_ahead_reads": {"avg": 0.0, "min": 0, "max": 0},
+        "row_count": {"avg": 4.0, "min": 4, "max": 4},
+        "executions": 8000,
+        "failures": 0
+      }
+    ],
+    "totals": {
+      "total_elapsed_ms": 2822.932,
+      "server_elapsed_ms": 13.000,
+      "server_cpu_ms": 0.000,
+      "server_elapsed_sum_ms": 13.000,
+      "server_cpu_sum_ms": 0.000,
+      "compile_elapsed_ms": 19.000,
+      "logical_reads": 16000,
+      "physical_reads": 0,
+      "read_ahead_reads": 0,
+      "total_rows": 32000,
+      "executions": 8000,
+      "failures": 0
+    }
+  },
+  "execution_elapsed_seconds": 0.420,
+  "connection_stats": {
+    "avg_ms": 47.500,
+    "min_ms": 47.000,
+    "max_ms": 48.000,
+    "count": 8
+  },
+  "metrics": {
+  "odbc_driver_version": "18.06.0001",
+  "total_runtime_seconds": 0.478,
+  "total_connection_time_seconds": 0.384,
+  "total_query_execution_time_seconds": 2.823,
+  "end_time": "2026-10-12T12:57:58.778",
+    "errors": {
+      "total": 0,
+      "list": []
+    },
+    "warnings": {
+      "total": 0,
+      "list": []
+    }
+  },
+  "server_edition": "Enterprise Developer Edition (64-bit)",
+  "server_version": "17.0.4085.5",
+  "success": true
+}

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<replay source="sqlsim replay test fixture" server="localhost">
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.000Z">
+    <data name="batch_text"><value>SELECT 1 AS value</value></data>
+    <action name="session_id"><value>51</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.100Z">
+    <data name="batch_text"><value>SELECT N&apos;hello&apos; AS value</value></data>
+    <action name="session_id"><value>51</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.200Z">
+    <data name="batch_text"><value>SELECT 2 AS value</value></data>
+    <action name="session_id"><value>52</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.300Z">
+    <data name="batch_text"><value>SELECT 3 AS value</value></data>
+    <action name="session_id"><value>52</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.400Z">
+    <data name="batch_text"><value>SELECT 4 AS value</value></data>
+    <action name="session_id"><value>53</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.500Z">
+    <data name="batch_text"><value>SELECT 5 AS value</value></data>
+    <action name="session_id"><value>53</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+  <event name="sql_batch_completed" timestamp="2026-01-15T10:00:01.600Z">
+    <data name="batch_text"><value>SELECT 6 AS value</value></data>
+    <action name="session_id"><value>53</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+  <event name="rpc_completed" timestamp="2026-01-15T10:00:01.700Z">
+    <data name="object_name"><value>sp_cursoropen</value></data>
+    <data name="statement"><value>SELECT 7 AS value</value></data>
+    <action name="session_id"><value>53</value></action>
+    <action name="database_name"><value>master</value></action>
+  </event>
+</replay>
