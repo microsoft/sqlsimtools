@@ -174,7 +174,7 @@ questions and early ideas. External pull requests are not accepted yet; see
 <p align="center">
   <a href="PROJECT-GUIDE.md">Full guide</a>
   &nbsp; | &nbsp;
-  <a href="https://github.com/microsoft/sqlsimtools/discussions/13">Welcome discussion</a>
+  <a href="https://github.com/microsoft/sqlsimtools/discussions/11">Welcome discussion</a>
   &nbsp; | &nbsp;
   <a href="LICENSE">MIT License</a>
 </p>
