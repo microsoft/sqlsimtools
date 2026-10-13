@@ -106,7 +106,7 @@ jobs:
               Write-Host "Created $zip"
           }
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sqlsim-zips
           path: ${{ runner.temp }}/artifacts/*.zip
@@ -128,7 +128,7 @@ jobs:
 
       # Studio ships only inside the sqlsimtools bundle, assembled once the
       # sqlsim and sqlpysim packages exist. Hidden files keep its .github skill.
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sqlsimstudio-win-x64-build
           path: ${{ github.workspace }}/sqlsimstudio/build/win-x64/
@@ -180,7 +180,7 @@ jobs:
             -Tool sqlsim \
             -SqlsimExecutable 'sqlsim/x64/sqlsim'
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sqlsim-linux-archive
           path: ${{ runner.temp }}/artifacts/*.tar.gz
@@ -225,7 +225,7 @@ jobs:
           test -f "$verify/THIRD-PARTY-NOTICES.md"
           bash '${{ github.workspace }}/sqlsimstudio/smoke-test-linux.sh' "$verify/sqlsimstudio"
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sqlsimstudio-linux-archive
           path: ${{ runner.temp }}/studio-artifacts/*.tar.gz
@@ -286,7 +286,7 @@ jobs:
               -Tool sqlpysim
           Write-Host "Created $zip"
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sqlpysim-zip
           path: ${{ runner.temp }}/artifacts/*.zip
@@ -395,7 +395,7 @@ jobs:
           & (Join-Path $env:GITHUB_WORKSPACE 'sqlsimstudio/full-test-suite.ps1') -SkipBuild -OfflineOnly -StudioExecutable $studio
           if ($LASTEXITCODE -ne 0) { throw 'Studio offline suite failed against the bundle.' }
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: sqlsimtools-windows-archive
           path: ${{ runner.temp }}/bundle-artifacts/*.zip
