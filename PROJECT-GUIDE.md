@@ -7,7 +7,7 @@ SQL workload engineering tools for SQL Server, Azure SQL, and SQL database in Mi
 
 **How these tools were built:** 100% of the code, scripts, and documentation was developed with GitHub Copilot in Visual Studio Code using various AI models, orchestrated by Bob Ward.
 
-[Join the sqlsimtools Discussions](https://github.com/microsoft/sqlsimtools/discussions) for usage questions, design feedback, and new workload ideas. To test a Private Preview platform, open a [Private Preview request](https://github.com/microsoft/sqlsimtools/issues/new?template=private-preview.yml). Start with the [welcome discussion](https://github.com/microsoft/sqlsimtools/discussions/13) for guidance on where to post.
+[Join the sqlsimtools Discussions](https://github.com/microsoft/sqlsimtools/discussions) for usage questions, design feedback, and new workload ideas. To test a Private Preview platform, open a [Private Preview request](https://github.com/microsoft/sqlsimtools/issues/new?template=private-preview.yml). Start with the [welcome discussion](https://github.com/microsoft/sqlsimtools/discussions/11) for guidance on where to post.
 
 ## Tools overview
 

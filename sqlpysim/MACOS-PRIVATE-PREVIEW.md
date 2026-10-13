@@ -64,7 +64,7 @@ authentication, or SQL authentication.
 
 Report non-sensitive results through the sqlsimtools macOS ARM64 Private
 Preview channel or the repository welcome discussion:
-<https://github.com/microsoft/sqlsimtools/discussions/13>.
+<https://github.com/microsoft/sqlsimtools/discussions/11>.
 
 Include the tool version, macOS version, architecture, Python version,
 `mssql-python` version, target SQL product/version, authentication mode,

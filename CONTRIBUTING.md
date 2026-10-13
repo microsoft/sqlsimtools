@@ -6,7 +6,7 @@ During Public Preview, the project accepts GitHub issues but does not accept
 external pull requests. Open an issue for reproducible bugs and scoped feature
 requests. Use [GitHub Discussions](https://github.com/microsoft/sqlsimtools/discussions)
 for questions, early proposals, platform testing interest, and new workload
-ideas. Start with the [welcome discussion](https://github.com/microsoft/sqlsimtools/discussions/13).
+ideas. Start with the [welcome discussion](https://github.com/microsoft/sqlsimtools/discussions/11).
 This policy will be reconsidered after Public Preview.
 
 ## Contributor License Agreement
