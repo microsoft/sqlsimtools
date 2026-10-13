@@ -10,13 +10,13 @@ This document defines supported and tested client-driver versions for tools in t
 
 ## Current Baseline
 
-Last validated policy update: 2026-10-12. The machine-readable tracked versions
+Last validated policy update: 2026-10-13. The machine-readable tracked versions
 are in [`.github/driver-versions.json`](.github/driver-versions.json); the
 release workflow writes them into every draft GitHub Release.
 
 | Tool | Driver | Tracked version | Source |
 | --- | --- | --- | --- |
-| `sqlsim` Windows | Microsoft ODBC Driver 18 for SQL Server | 18.6.2.1 | Installed on the host |
+| `sqlsim` Windows | Microsoft ODBC Driver 18 for SQL Server | 18.7.1.1 | Installed on the host |
 | `sqlsim` Ubuntu | Microsoft ODBC Driver 18 for SQL Server, unixODBC 2.3.14 | 18.7.1.1 | Installed on the host |
 | `sqlpysim` | `mssql-python` | 1.15.0 | `sqlpysim/requirements.txt`; bundles its own ODBC Driver 18 build |
 | sqlsim Studio | `Microsoft.Data.SqlClient` | 7.1.0 | Compiled into Studio; used only for Query Store collection |
@@ -24,7 +24,7 @@ release workflow writes them into every draft GitHub Release.
 ### sqlsim (C++ / ODBC)
 
 - Preferred driver family: Microsoft ODBC Driver 18 for SQL Server (`msodbcsql18`).
-- Windows tracked version: 18.6.2.1. The 1.0.0 live Windows integrated-auth validation on 2026-10-12 ran ODBC Driver 18.6.1.1 against SQL Server 17.0.4085.5: full suite 251/251.
+- Windows tracked version: 18.7.1.1. The 1.0.0 live Windows integrated-auth validation on 2026-10-13 ran ODBC Driver 18.7.1.1 against SQL Server 17.0.4085.5: sqlsim smoke 48/48, full suite 255/255, replay 24/24, examples 39/39, and the sqlsim Studio smoke test. The earlier 2026-10-12 run on 18.6.1.1 also passed.
 - Ubuntu validation version: 18.7.1.1 with unixODBC 2.3.14.
 - Supported floor: ODBC Driver 18.0; sqlsim names `ODBC Driver 18 for SQL Server` explicitly.
 - Recommended for release validation and customer guidance: latest available 18.x.

@@ -80,7 +80,7 @@ body:
     attributes:
       label: Driver version
       description: ODBC driver build for sqlsim, or the mssql-python package version for sqlpysim. See DRIVER-COMPATIBILITY.md.
-      placeholder: msodbcsql18 18.6.2.1
+      placeholder: msodbcsql18 18.7.1.1
 
   - type: textarea
     id: repro

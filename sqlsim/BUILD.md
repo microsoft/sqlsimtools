@@ -141,7 +141,7 @@ winget install Microsoft.VisualStudio.2022.Community
 ### Other Requirements
 - Windows 10/11
 - PowerShell 5.1 or later (included with Windows 10/11) - all scripts are compatible with Windows PowerShell 5.1
-- ODBC Driver 18 for SQL Server (current documented baseline: 18.6.2.1)
+- ODBC Driver 18 for SQL Server (current documented baseline: 18.7.1.1)
 
 For driver support policy and update cadence, see [../DRIVER-COMPATIBILITY.md](../DRIVER-COMPATIBILITY.md).
 
