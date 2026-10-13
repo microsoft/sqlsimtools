@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 580 120" width="580" height="120">
+  <defs>
+    <linearGradient id="dbGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#3498db;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2980b9;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#e74c3c;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f39c12;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <g transform="translate(15, 15) scale(0.72)">
+    <ellipse cx="64" cy="28" rx="44" ry="14" fill="url(#dbGrad)"/>
+    <rect x="20" y="28" width="88" height="64" fill="url(#dbGrad)"/>
+    <ellipse cx="64" cy="92" rx="44" ry="14" fill="#2471a3"/>
+    <ellipse cx="64" cy="28" rx="38" ry="9" fill="white" opacity="0.2"/>
+    <text x="64" y="65" font-family="Consolas, 'Courier New', monospace" font-size="28" font-weight="bold"
+          fill="white" text-anchor="middle" opacity="0.95">SQL</text>
+    <g transform="translate(30, 74)">
+      <path d="M0,4 L18,4 L18,0 L28,8 L18,16 L18,12 L0,12 Z" fill="url(#accentGrad)" opacity="0.95"/>
+      <path d="M22,4 L40,4 L40,0 L50,8 L40,16 L40,12 L22,12 Z" fill="url(#accentGrad)" opacity="0.75"/>
+      <path d="M44,4 L62,4 L62,0 L72,8 L62,16 L62,12 L44,12 Z" fill="url(#accentGrad)" opacity="0.55"/>
+    </g>
+  </g>
+
+  <text x="125" y="55" font-family="Segoe UI, Arial, sans-serif" font-size="36" font-weight="bold" fill="#2c3e50">
+    <tspan fill="#3498db">sql</tspan><tspan fill="#2c3e50">sim</tspan><tspan fill="#e74c3c">tools</tspan>
+  </text>
+  <text x="127" y="82" font-family="Segoe UI, Arial, sans-serif" font-size="16" fill="#7f8c8d">
+    SQL Workload Simulation Tools
+  </text>
+  <text x="127" y="104" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#95a5a6">
+    High-performance SQL Server testing &amp; benchmarking
+  </text>
+</svg>

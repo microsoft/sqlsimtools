@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question about using the tools
+    url: https://github.com/microsoft/sqlsimtools/discussions/categories/q-a
+    about: "Ask in Q&A Discussions. See SUPPORT.md for the support policy."
+  - name: New workload or design idea
+    url: https://github.com/microsoft/sqlsimtools/discussions/categories/ideas
+    about: "Start an Ideas discussion with the scenario, target SQL products, workload shape, success metrics, and expected output."
+  - name: Security vulnerability
+    url: https://github.com/microsoft/sqlsimtools/security/policy
+    about: "Report privately to the Microsoft Security Response Center. Never open a public issue for a security report."

@@ -1,0 +1,27 @@
+{
+  "name": "sqlsimtools",
+  "owner": {
+    "name": "Microsoft",
+    "url": "https://github.com/microsoft/sqlsimtools"
+  },
+  "metadata": {
+    "description": "Agent plugins for running SQL Server workloads with sqlsim and sqlpysim.",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "sqlsim",
+      "description": "Guidance for running SQL queries, scripts, load tests, and measured multi-threaded workloads with the native sqlsim CLI.",
+      "version": "1.0.0",
+      "source": "./plugins/sqlsim",
+      "category": "Databases"
+    },
+    {
+      "name": "sqlpysim",
+      "description": "Guidance for running sqlsim-compatible SQL workloads from Python with Microsoft's native mssql-python driver.",
+      "version": "1.0.0",
+      "source": "./plugins/sqlpysim",
+      "category": "Databases"
+    }
+  ]
+}

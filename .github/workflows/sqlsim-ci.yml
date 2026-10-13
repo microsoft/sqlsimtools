@@ -1,0 +1,177 @@
+name: sqlsim CI
+
+# Builds sqlsim on a clean Windows runner and runs offline sanity checks on every
+# pull request that touches sqlsim/ (and on pushes to main). No SQL Server is
+# available on hosted runners, so connection / query tests are NOT run here —
+# they remain manual via smoke-test.ps1 / full-test-suite.ps1.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sqlsim/**'
+      - 'sqlpysim/publish.ps1'
+      - 'release/**'
+      - 'scripts/install-local.ps1'
+      - '.github/workflows/sqlsim-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sqlsim/**'
+      - 'sqlpysim/publish.ps1'
+      - 'release/**'
+      - 'scripts/install-local.ps1'
+      - '.github/workflows/sqlsim-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build (windows-latest, x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: sqlsim
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Build sqlsim (Release, x64)
+        run: .\build.ps1 -Architecture x64 -Configuration Release
+
+      - name: Verify executable
+        run: |
+          $exe = ".\build\x64\Release\sqlsim.exe"
+          if (-not (Test-Path $exe)) {
+            Write-Error "sqlsim.exe not found at $exe"
+            exit 1
+          }
+          Write-Host "Found $exe ($((Get-Item $exe).Length) bytes)"
+
+      - name: Run offline sanity checks (-h / --version)
+        run: |
+          $exe = ".\build\x64\Release\sqlsim.exe"
+          & $exe -h | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Error "sqlsim -h failed (exit $LASTEXITCODE)"; exit 1 }
+          & $exe --version | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Error "sqlsim --version failed (exit $LASTEXITCODE)"; exit 1 }
+          Write-Host "Offline sanity checks passed"
+
+      - name: Validate authentication parser matrix
+        run: |
+          $exe = ".\build\x64\Release\sqlsim.exe"
+          $cases = @(
+            @{ Args = @('-S','localhost','-A','ActiveDirectoryMsi','-P','invalid'); Expected = 'does not accept -P' },
+            @{ Args = @('-S','localhost','-A','ActiveDirectoryServicePrincipal'); Expected = 'requires -U <client_id> and -P <client_secret>' }
+          )
+          foreach ($case in $cases) {
+            $output = & $exe @($case.Args) 2>&1 | Out-String
+            if ($output -notlike "*$($case.Expected)*") {
+              Write-Error "Authentication parser check failed: $output"
+              exit 1
+            }
+          }
+          Write-Host "Authentication parser checks passed"
+          exit 0
+
+      - name: Test safe install into an existing project
+        # Publishes sqlsim and sqlpysim into a temporary project and checks that
+        # changed project files are never replaced without -Force, a project's
+        # own files are never deleted, and the result passes offline validation.
+        run: ..\release\test-overlay-install.ps1 -Architecture x64
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsim-x64-release
+          path: sqlsim/build/x64/Release/sqlsim.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  build-linux:
+    name: Build (Ubuntu 24.04, x64)
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        shell: bash
+        working-directory: sqlsim
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install build and runtime prerequisites
+        run: |
+          ubuntu_version="$(. /etc/os-release && echo "$VERSION_ID")"
+          curl -sSL -O "https://packages.microsoft.com/config/ubuntu/$ubuntu_version/packages-microsoft-prod.deb"
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev build-essential cmake cppcheck
+
+      - name: Run Cppcheck security analysis
+        run: |
+          cppcheck \
+            --enable=warning,performance,portability \
+            --error-exitcode=1 \
+            --std=c++17 \
+            --language=c++ \
+            --platform=unix64 \
+            -DSQLSIM_PLATFORM_LINUX=1 \
+            -I include \
+            --suppress=missingIncludeSystem \
+            src include
+
+      - name: Build sqlsim (Release, x64)
+        run: bash ./build-linux.sh --clean
+
+      - name: Run offline smoke tests
+        run: bash ./smoke-test-linux.sh --skip-build
+
+      - name: Test safe install into an existing project
+        run: bash ../release/test-overlay-install-linux.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsim-linux-x64-release
+          path: sqlsim/build/linux-x64/sqlsim
+          if-no-files-found: error
+          retention-days: 14
+
+  lint-powershell:
+    name: PSScriptAnalyzer
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: sqlsim
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Install PSScriptAnalyzer
+        run: |
+          if (-not (Get-PSResourceRepository -Name PSGallery -ErrorAction SilentlyContinue)) {
+            Register-PSResourceRepository -PSGallery
+          }
+          Set-PSResourceRepository -Name PSGallery -Trusted
+          Install-PSResource -Name PSScriptAnalyzer -Repository PSGallery -TrustRepository -Scope CurrentUser
+
+      - name: Analyze PowerShell scripts
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path . -Recurse -Severity Error
+          if ($results) {
+            $results | Format-Table -AutoSize
+            Write-Error "PSScriptAnalyzer found $($results.Count) error-level issue(s)"
+            exit 1
+          }
+          Write-Host "PSScriptAnalyzer: no error-level issues"
+
+      - name: Test HTML report generators
+        run: .\test-reports.ps1

@@ -1,0 +1,23 @@
+name: Documentation issue
+description: Report something wrong, missing, or unclear in the documentation
+labels: ["documentation"]
+body:
+  - type: input
+    id: location
+    attributes:
+      label: Page or file
+      placeholder: INSTALL.md, sqlsim/sqlsim.md, sqlpysim/SETUP.md
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What is wrong, missing, or unclear?
+    validations:
+      required: true
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested correction

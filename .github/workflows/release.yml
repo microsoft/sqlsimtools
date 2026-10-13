@@ -1,0 +1,473 @@
+name: Release
+
+# Builds and validates every public release asset. A manual workflow_dispatch
+# run retains the packages as GitHub Actions artifacts only; it cannot create a
+# tag or GitHub Release. Pushing a semver tag (for example, v1.0.0) additionally
+# creates a draft GitHub Release for human review and publication.
+#
+# Version is taken from the tag (v1.0.0 -> 1.0.0). The workflow does NOT modify
+# any in-tree version constants; the verify-version job fails the run unless
+# they already match (see release/check-release-version.ps1).
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  # Manual trigger for RC validation. The version labels the Actions artifacts
+  # only; this path does not create a tag or GitHub Release.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version label for RC artifacts (e.g. 1.0.0-rc1). No `v` prefix.'
+        required: true
+        default: '1.0.0-rc1'
+
+permissions:
+  contents: read
+
+jobs:
+  # -------------------------------------------------------------------------
+  # 0. Refuse to build when the tag or RC label does not match the versions
+  #    compiled into the tools, so archive names and --version always agree.
+  # -------------------------------------------------------------------------
+  verify-version:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Check tool versions match the release version
+        shell: pwsh
+        env:
+          INPUT_VERSION: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          $ref = if ([string]::IsNullOrEmpty($env:INPUT_VERSION)) { $env:REF_NAME } else { $env:INPUT_VERSION }
+          ./release/check-release-version.ps1 -Version $ref
+
+  # -------------------------------------------------------------------------
+  # 1. Build sqlsim (multi-arch). publish.ps1 produces one install root with
+  #    sqlsim/x64 and sqlsim/ARM64; split it into per-architecture ZIPs. Then
+  #    build Studio with the x64 binary for the sqlsimtools bundle.
+  # -------------------------------------------------------------------------
+  build-sqlsim:
+    needs: verify-version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Derive version
+        id: ver
+        shell: pwsh
+        run: |
+          $ref = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrEmpty($ref)) { $ref = '${{ github.ref_name }}' }
+          $v = $ref -replace '^v',''
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+          Write-Host "Version: $v"
+
+      - name: Install pandoc
+        uses: pandoc/actions/setup@86321b6dd4675f5014c611e05088e10d4939e09e # v1
+        with:
+          version: '3.5'
+
+      - name: Run sqlsim publish.ps1 (builds x64 + ARM64, generates HTML)
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP 'stage\sqlsim'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'sqlsim/publish.ps1') -ReleaseDir $stage
+          "STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Split into per-arch ZIPs
+        shell: pwsh
+        run: |
+          $ver  = '${{ steps.ver.outputs.version }}'
+          $src  = $env:STAGE
+          $out  = Join-Path $env:RUNNER_TEMP 'artifacts'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+
+          foreach ($arch in @('x64','ARM64')) {
+              $tmp = Join-Path $env:RUNNER_TEMP "split\sqlsim-$arch"
+              New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+              Get-ChildItem $src -Force | ForEach-Object {
+                  Copy-Item -Recurse -Force $_.FullName $tmp
+              }
+              $otherArch = if ($arch -eq 'x64') { 'ARM64' } else { 'x64' }
+              Remove-Item -Recurse -Force (Join-Path $tmp "sqlsim\$otherArch")
+              $archLower = $arch.ToLower()
+              $zip = Join-Path $out "sqlsim-$ver-win-$archLower.zip"
+              Compress-Archive -Path (Join-Path $tmp '*') -DestinationPath $zip -Force
+              $verify = Join-Path $env:RUNNER_TEMP "verify\sqlsim-$arch"
+              Expand-Archive -Path $zip -DestinationPath $verify -Force
+              & (Join-Path $env:GITHUB_WORKSPACE 'release/validate-package-layout.ps1') `
+                -InstallRoot $verify `
+                -Tool sqlsim `
+                  -SqlsimExecutable "sqlsim/$arch/sqlsim.exe" `
+                  -SkipExecution:($arch -eq 'ARM64')
+              Write-Host "Created $zip"
+          }
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsim-zips
+          path: ${{ runner.temp }}/artifacts/*.zip
+          if-no-files-found: error
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build and smoke test sqlsim Studio
+        shell: pwsh
+        run: |
+          & (Join-Path $env:GITHUB_WORKSPACE 'sqlsimstudio/build.ps1') -Runtime win-x64
+          & (Join-Path $env:GITHUB_WORKSPACE 'sqlsimstudio/smoke-test.ps1') `
+            -SkipBuild `
+            -StartupOnly `
+            -StudioExecutable (Join-Path $env:GITHUB_WORKSPACE 'sqlsimstudio/build/win-x64/sqlsimstudio.exe')
+
+      # Studio ships only inside the sqlsimtools bundle, assembled once the
+      # sqlsim and sqlpysim packages exist. Hidden files keep its .github skill.
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsimstudio-win-x64-build
+          path: ${{ github.workspace }}/sqlsimstudio/build/win-x64/
+          include-hidden-files: true
+          if-no-files-found: error
+  build-sqlsim-linux:
+    needs: verify-version
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Derive version
+        id: ver
+        shell: bash
+        run: |
+          ref='${{ github.event.inputs.version }}'
+          if [[ -z "$ref" ]]; then ref='${{ github.ref_name }}'; fi
+          version="${ref#v}"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - name: Install build and runtime prerequisites
+        run: |
+          ubuntu_version="$(. /etc/os-release && echo "$VERSION_ID")"
+          curl -sSL -O "https://packages.microsoft.com/config/ubuntu/$ubuntu_version/packages-microsoft-prod.deb"
+          sudo dpkg -i packages-microsoft-prod.deb
+          rm packages-microsoft-prod.deb
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev build-essential cmake pandoc
+
+      - name: Build and test sqlsim
+        working-directory: sqlsim
+        run: |
+          bash ./build-linux.sh --clean
+          bash ./smoke-test-linux.sh --skip-build
+
+      - name: Stage Linux release
+        working-directory: sqlsim
+        run: bash ./publish-linux.sh --skip-build --release-dir '${{ runner.temp }}/stage/sqlsim'
+
+      - name: Create Linux archive
+        shell: bash
+        run: |
+          mkdir -p '${{ runner.temp }}/artifacts'
+          tar -C '${{ runner.temp }}/stage/sqlsim' -czf '${{ runner.temp }}/artifacts/sqlsim-${{ steps.ver.outputs.version }}-linux-x64.tar.gz' .
+          mkdir -p '${{ runner.temp }}/verify/sqlsim-linux-x64'
+          tar -C '${{ runner.temp }}/verify/sqlsim-linux-x64' -xzf '${{ runner.temp }}/artifacts/sqlsim-${{ steps.ver.outputs.version }}-linux-x64.tar.gz'
+          pwsh '${{ github.workspace }}/release/validate-package-layout.ps1' \
+            -InstallRoot '${{ runner.temp }}/verify/sqlsim-linux-x64' \
+            -Tool sqlsim \
+            -SqlsimExecutable 'sqlsim/x64/sqlsim'
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsim-linux-archive
+          path: ${{ runner.temp }}/artifacts/*.tar.gz
+          if-no-files-found: error
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build sqlsim Studio
+        working-directory: sqlsimstudio
+        run: bash ./build-linux.sh linux-x64
+
+      - name: Create and validate sqlsim Studio Linux archive
+        shell: bash
+        run: |
+          src='${{ github.workspace }}/sqlsimstudio/build/linux-x64'
+          out='${{ runner.temp }}/studio-artifacts'
+          verify='${{ runner.temp }}/verify/sqlsimstudio-linux-x64'
+          mkdir -p "$out" "$verify"
+
+          archive="$out/sqlsimstudio-${{ steps.ver.outputs.version }}-linux-x64.tar.gz"
+          tar -C "$src" -czf "$archive" .
+          tar -C "$verify" -xzf "$archive"
+
+          test -x "$verify/sqlsimstudio"
+          test -x "$verify/sqlsim/sqlsim"
+          test -f "$verify/sqlpysim/sqlpysim.py"
+          test -f "$verify/sqlpysim/requirements.txt"
+          test -f "$verify/sqlsimstudio.md"
+          test -f "$verify/sqlsimstudio.html"
+          test -f "$verify/CONFIGURATION.md"
+          test -f "$verify/examples/README.md"
+          test -f "$verify/examples/convert-workload-for-studio.ps1"
+          test -f "$verify/examples/any-database/workload/demo-workload.json"
+          test -f "$verify/examples/any-database/sql/light-query.sql"
+          test -f "$verify/examples/any-database/replay/catalog-replay.xml"
+          test -f "$verify/examples/adventureworkslt/replay/portable-replay.xml"
+          test -f "$verify/.github/skills/sqlsimstudio/SKILL.md"
+          test -f "$verify/LICENSE"
+          test -f "$verify/THIRD-PARTY-NOTICES.md"
+          bash '${{ github.workspace }}/sqlsimstudio/smoke-test-linux.sh' "$verify/sqlsimstudio"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsimstudio-linux-archive
+          path: ${{ runner.temp }}/studio-artifacts/*.tar.gz
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------
+  # 2. Package sqlpysim as a source ZIP (arch-agnostic, no PyPI in v1.0).
+  # -------------------------------------------------------------------------
+  build-sqlpysim:
+    needs: verify-version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Derive version
+        id: ver
+        shell: pwsh
+        run: |
+          $ref = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrEmpty($ref)) { $ref = '${{ github.ref_name }}' }
+          $v = $ref -replace '^v',''
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install sqlpysim dependencies
+        shell: pwsh
+        run: python -m pip install -r sqlpysim/requirements.txt
+
+      - name: Install pandoc
+        uses: pandoc/actions/setup@86321b6dd4675f5014c611e05088e10d4939e09e # v1
+        with:
+          version: '3.5'
+
+      - name: Run sqlpysim publish.ps1
+        shell: pwsh
+        run: |
+          $stage = Join-Path $env:RUNNER_TEMP 'stage\sqlpysim'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          & (Join-Path $env:GITHUB_WORKSPACE 'sqlpysim/publish.ps1') -ReleaseDir $stage
+          "STAGE=$stage" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          $ver  = '${{ steps.ver.outputs.version }}'
+          $out  = Join-Path $env:RUNNER_TEMP 'artifacts'
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          $zip = Join-Path $out "sqlpysim-$ver-src.zip"
+          Compress-Archive -Path (Join-Path $env:STAGE '*') -DestinationPath $zip -Force
+            $verify = Join-Path $env:RUNNER_TEMP 'verify\sqlpysim'
+            Expand-Archive -Path $zip -DestinationPath $verify -Force
+            & (Join-Path $env:GITHUB_WORKSPACE 'release/validate-package-layout.ps1') `
+              -InstallRoot $verify `
+              -Tool sqlpysim
+          Write-Host "Created $zip"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlpysim-zip
+          path: ${{ runner.temp }}/artifacts/*.zip
+          if-no-files-found: error
+
+  # -------------------------------------------------------------------------
+  # 4. Assemble the sqlsimtools Windows x64 bundle from the released sqlsim x64
+  #    and sqlpysim packages plus the Studio build, then validate it.
+  # -------------------------------------------------------------------------
+  build-sqlsimtools:
+    needs: [build-sqlsim, build-sqlpysim]
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Derive version
+        id: ver
+        shell: pwsh
+        run: |
+          $ref = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrEmpty($ref)) { $ref = '${{ github.ref_name }}' }
+          $v = $ref -replace '^v',''
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Download sqlsim packages
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sqlsim-zips
+          path: ${{ runner.temp }}/in/sqlsim
+
+      - name: Download sqlpysim package
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sqlpysim-zip
+          path: ${{ runner.temp }}/in/sqlpysim
+
+      - name: Download Studio build
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: sqlsimstudio-win-x64-build
+          path: ${{ runner.temp }}/in/studio
+
+      - name: Build and validate sqlsimtools bundle
+        shell: pwsh
+        run: |
+          $ver = '${{ steps.ver.outputs.version }}'
+          $in = Join-Path $env:RUNNER_TEMP 'in'
+          $out = Join-Path $env:RUNNER_TEMP 'bundle-artifacts'
+          $zip = & (Join-Path $env:GITHUB_WORKSPACE 'release/build-sqlsimtools-bundle.ps1') `
+            -SqlsimPackage (Join-Path $in "sqlsim/sqlsim-$ver-win-x64.zip") `
+            -SqlpysimPackage (Join-Path $in "sqlpysim/sqlpysim-$ver-src.zip") `
+            -StudioBuild (Join-Path $in 'studio') `
+            -Version $ver `
+            -OutputDirectory $out
+          $verify = Join-Path $env:RUNNER_TEMP 'verify/sqlsimtools-win-x64'
+          Expand-Archive -Path $zip -DestinationPath $verify -Force
+
+          $required = @(
+            'README.md',
+            'sqlsimstudio/sqlsimstudio.exe',
+            'sqlsimstudio/sqlsimstudio.md',
+            'sqlsimstudio/sqlsimstudio.html',
+            'sqlsimstudio/sqlsimstudio.html',
+            'sqlsimstudio/CONFIGURATION.md',
+            'sqlsimstudio/sqlsimstudio-cleanup.ps1',
+            'sqlsimstudio/LICENSE',
+            'sqlsimstudio/THIRD-PARTY-NOTICES.md',
+            'sqlsimstudio/examples/README.md',
+            'sqlsimstudio/examples/convert-workload-for-studio.ps1',
+            'sqlsimstudio/examples/any-database/workload/demo-workload.json',
+            'sqlsimstudio/examples/any-database/replay/catalog-replay.xml',
+            'sqlsimstudio/examples/adventureworkslt/README.md',
+            'sqlsimstudio/examples/adventureworkslt/replay/portable-replay.xml',
+            'sqlsimstudio/examples/sql/live-progress-monitor-lt.sql',
+            'sqlsim/x64/sqlsim.exe',
+            'sqlsim/examples/results/index-baseline.json',
+            'sqlsim/replay/convert-xel.ps1',
+            'sqlpysim/sqlpysim.py',
+            '.github/skills/sqlsim/SKILL.md',
+            '.github/skills/sqlpysim/SKILL.md',
+            '.github/skills/sqlsimstudio/SKILL.md',
+            '.github/agents/sqlsimtools-workload-builder.agent.md'
+          )
+          foreach ($relativePath in $required) {
+            if (-not (Test-Path -LiteralPath (Join-Path $verify $relativePath))) {
+              throw "sqlsimtools bundle is missing $relativePath"
+            }
+          }
+          foreach ($duplicate in 'sqlsimstudio/sqlsim', 'sqlsimstudio/sqlpysim', 'sqlsimstudio/.github', 'sqlsim/ARM64') {
+            if (Test-Path -LiteralPath (Join-Path $verify $duplicate)) {
+              throw "sqlsimtools bundle must not contain $duplicate"
+            }
+          }
+
+          & (Join-Path $env:GITHUB_WORKSPACE 'release/validate-package-layout.ps1') `
+            -InstallRoot $verify -Tool sqlsim -SqlsimExecutable 'sqlsim/x64/sqlsim.exe'
+          if ($LASTEXITCODE -ne 0) { throw 'sqlsim layout validation failed in the bundle.' }
+          & (Join-Path $env:GITHUB_WORKSPACE 'release/validate-package-layout.ps1') `
+            -InstallRoot $verify -Tool sqlpysim
+          if ($LASTEXITCODE -ne 0) { throw 'sqlpysim layout validation failed in the bundle.' }
+
+          $studio = Join-Path $verify 'sqlsimstudio/sqlsimstudio.exe'
+          & (Join-Path $env:GITHUB_WORKSPACE 'sqlsimstudio/smoke-test.ps1') -SkipBuild -StartupOnly -StudioExecutable $studio
+          if ($LASTEXITCODE -ne 0) { throw 'Studio startup smoke test failed in the bundle.' }
+          # Offline suite proves the bundled Studio finds sqlsim in ../sqlsim/x64.
+          & (Join-Path $env:GITHUB_WORKSPACE 'sqlsimstudio/full-test-suite.ps1') -SkipBuild -OfflineOnly -StudioExecutable $studio
+          if ($LASTEXITCODE -ne 0) { throw 'Studio offline suite failed against the bundle.' }
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlsimtools-windows-archive
+          path: ${{ runner.temp }}/bundle-artifacts/*.zip
+          if-no-files-found: error
+  # -------------------------------------------------------------------------
+  # 3. On tag pushes only, create the draft GitHub Release and attach all
+  #    public assets. workflow_dispatch runs stop after artifact upload.
+  # -------------------------------------------------------------------------
+  release:
+    if: github.event_name == 'push' && github.ref_type == 'tag'
+    needs: [build-sqlsim, build-sqlsim-linux, build-sqlpysim, build-sqlsimtools]
+    runs-on: windows-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Derive version
+        id: ver
+        shell: pwsh
+        run: |
+          $ref = '${{ github.event.inputs.version }}'
+          if ([string]::IsNullOrEmpty($ref)) { $ref = '${{ github.ref_name }}' }
+          $v = $ref -replace '^v',''
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Write validated driver section
+        shell: pwsh
+        run: |
+          $drivers = Get-Content .github/driver-versions.json -Raw | ConvertFrom-Json
+          [xml]$project = Get-Content sqlsimstudio/server/SqlsimStudio.csproj -Raw
+          $sqlClient = @($project.Project.ItemGroup.PackageReference |
+            Where-Object { $_.Include -eq 'Microsoft.Data.SqlClient' })[0].Version
+          if (-not $sqlClient) { throw 'Microsoft.Data.SqlClient version not found in SqlsimStudio.csproj.' }
+          $body = @(
+            '## Validated client drivers'
+            ''
+            '| Tool | Driver | Validated version |'
+            '| --- | --- | --- |'
+            "| sqlsim, Windows | Microsoft ODBC Driver 18 for SQL Server | $($drivers.odbcDriver18.windows) |"
+            "| sqlsim, Ubuntu | Microsoft ODBC Driver 18 for SQL Server | $($drivers.odbcDriver18.ubuntu) |"
+            "| sqlpysim | mssql-python | $($drivers.mssqlPython) |"
+            "| sqlsim Studio Query Store collection | Microsoft.Data.SqlClient | $sqlClient |"
+            ''
+            'Newer 18.x ODBC and 1.x mssql-python releases are supported on a best-effort basis until validated. See [DRIVER-COMPATIBILITY.md](https://github.com/${{ github.repository }}/blob/v${{ steps.ver.outputs.version }}/DRIVER-COMPATIBILITY.md).'
+          )
+          $path = Join-Path $env:RUNNER_TEMP 'release-body.md'
+          $body | Set-Content -Path $path -Encoding utf8
+          Get-Content $path
+
+      - name: Download all per-tool artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: ${{ runner.temp }}/all
+          merge-multiple: true
+
+      - name: Stage release assets
+        shell: pwsh
+        run: |
+          # Adds a version-free copy of each package so the README can link to
+          # releases/latest/download/<name> without changing every release.
+          & ./release/stage-release-assets.ps1 `
+            -ArtifactDirectory (Join-Path $env:RUNNER_TEMP 'all') `
+            -OutputDirectory (Join-Path $env:RUNNER_TEMP 'release-assets') `
+            -Version '${{ steps.ver.outputs.version }}'
+      - name: Create draft Release with auto-generated notes
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          draft: true
+          generate_release_notes: true
+          body_path: ${{ runner.temp }}/release-body.md
+          name: v${{ steps.ver.outputs.version }}
+          tag_name: v${{ steps.ver.outputs.version }}
+          files: ${{ runner.temp }}/release-assets/*
+          fail_on_unmatched_files: true

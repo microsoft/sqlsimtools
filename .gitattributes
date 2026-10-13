@@ -1,0 +1,6 @@
+# Preserve the integrity-verified vendored Chart.js bytes exactly.
+sqlsim/examples/reports/chart.umd.min.js binary
+sqlsimstudio/client/vendor/lucide.min.js binary
+
+# Shell scripts must remain executable on Unix-like systems without CRLF conversion.
+*.sh text eol=lf

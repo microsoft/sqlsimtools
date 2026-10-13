@@ -1,0 +1,77 @@
+name: sqlpysim CI
+
+# Validates sqlpysim changes on a clean runner. Hosted runners do not provide
+# SQL Server, so this workflow performs offline checks only.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sqlpysim/**'
+      - '.github/workflows/sqlpysim-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sqlpysim/**'
+      - '.github/workflows/sqlpysim-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: sqlpysim
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pip-audit==2.10.1 bandit==1.9.4
+
+      - name: Audit dependencies and Python source
+        run: |
+          python -m pip_audit -r requirements.txt
+          python -m bandit -r sqlpysim.py setup.py --skip B105
+
+      - name: Run offline unit tests
+        run: python -m unittest discover -s tests -p "test_*.py" -v
+
+      - name: Offline sanity checks (-h / --version)
+        run: |
+          python ./sqlpysim.py -h | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Error "sqlpysim -h failed (exit $LASTEXITCODE)"; exit 1 }
+          python ./sqlpysim.py --version | Out-Null
+          if ($LASTEXITCODE -ne 0) { Write-Error "sqlpysim --version failed (exit $LASTEXITCODE)"; exit 1 }
+          Write-Host "Offline sanity checks passed"
+
+      - name: Upload artifact
+        if: matrix.os == 'windows-latest'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: sqlpysim-source
+          path: |
+            sqlpysim/sqlpysim.py
+            sqlpysim/requirements.txt
+            sqlpysim/README.md
+            sqlpysim/sqlpysim.md
+          if-no-files-found: error
+          retention-days: 14

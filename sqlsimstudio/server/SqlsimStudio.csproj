@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <!-- WinExe suppresses the console window Windows allocates for a console
+         subsystem process. Studio's interface is the browser, so that window
+         only offered a way to kill the app by closing it. Console writes are
+         kept: they still reach an inherited console when Studio is launched
+         from a terminal, and a redirected stream when a harness captures
+         stdout. The property has no effect on non-Windows targets. -->
+    <OutputType>WinExe</OutputType>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>sqlsimstudio</AssemblyName>
+    <RootNamespace>SqlsimStudio</RootNamespace>
+    <Version>1.0.0</Version>
+    <IsTransformWebConfigDisabled>true</IsTransformWebConfigDisabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <RuntimeHostConfigurationOption Include="System.Globalization.AppLocalIcu" Value="72.1.0.3" />
+    <EmbeddedResource Include="..\client\index.html" LogicalName="SqlsimStudio.Assets.index.html" />
+    <EmbeddedResource Include="..\client\styles.css" LogicalName="SqlsimStudio.Assets.styles.css" />
+    <EmbeddedResource Include="..\client\app.js" LogicalName="SqlsimStudio.Assets.app.js" />
+    <EmbeddedResource Include="..\client\vendor\lucide.min.js" LogicalName="SqlsimStudio.Assets.vendor.lucide.min.js" />
+    <EmbeddedResource Include="..\..\assets\sqlsim-icon.svg" LogicalName="SqlsimStudio.Assets.sqlsim-icon.svg" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.0" />
+  </ItemGroup>
+</Project>

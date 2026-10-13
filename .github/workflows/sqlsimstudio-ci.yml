@@ -1,0 +1,120 @@
+name: sqlsim Studio CI
+
+# Builds sqlsim Studio and runs its offline checks on a clean Windows runner.
+#
+# Runs on pull requests and pushes to main that touch Studio, and on demand.
+# Hosted runners have no SQL Server, so the live workload
+# tests in smoke-test.ps1 and gui-tests/studio.spec.cjs cannot run here; those
+# remain manual via smoke-test.ps1 and gui-smoke-test.ps1 against a real target.
+#
+# What DOES run here needs no database:
+#   - smoke-test.ps1 -StartupOnly: loopback binding, one-time bootstrap, session
+#     cookie, Host/Origin rejection, and the served interface contract
+#   - gui-tests/interface.spec.cjs and configuration.spec.cjs: browser tests that
+#     load client/index.html over file://, so no Studio process is required
+#   - gui-tests/responsive.spec.cjs: layout sweep across widths in Chromium,
+#     Firefox, WebKit, and a wide-font pass
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'sqlsimstudio/**'
+      - '.github/skills/sqlsimstudio/**'
+      - '.github/workflows/sqlsimstudio-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'sqlsimstudio/**'
+      - '.github/skills/sqlsimstudio/**'
+      - '.github/workflows/sqlsimstudio-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and offline checks (windows-latest, x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Set up Node
+        uses: actions/setup-node@39370e3970a6d050c480ffad4ff0ed4d3fdee5af # v4
+        with:
+          node-version: '20.x'
+
+      - name: Verify Studio command-line contract
+        working-directory: sqlsimstudio
+        run: |
+          dotnet build server/SqlsimStudio.csproj -c Release
+          if ($LASTEXITCODE -ne 0) { throw 'Studio build failed.' }
+          $dll = 'server/bin/Release/net10.0/sqlsimstudio.dll'
+          $help = & dotnet $dll --help 2>&1 | Out-String
+          if ($help -notmatch '--no-open' -or $help -notmatch '--bootstrap-file' -or $help -notmatch '--port') {
+            throw "Studio --help did not describe its options:`n$help"
+          }
+          Write-Host 'Studio --help lists its documented options.'
+
+      # --no-open without --bootstrap-file would write the single-use token to the log.
+      - name: Verify bootstrap token is never logged
+        working-directory: sqlsimstudio
+        run: |
+          $dll = 'server/bin/Release/net10.0/sqlsimstudio.dll'
+          $output = & dotnet $dll --no-open 2>&1 | Out-String
+          if ($LASTEXITCODE -eq 0 -or $output -notmatch 'requires --bootstrap-file') {
+            throw "Studio accepted --no-open without --bootstrap-file:`n$output"
+          }
+          Write-Host 'Studio requires --bootstrap-file when the browser is not launched.'
+          # The rejection is the expected result; do not let its exit code fail the step.
+          exit 0
+
+      - name: Startup and security smoke test
+        working-directory: sqlsimstudio
+        run: ./smoke-test.ps1 -SkipBuild -StartupOnly
+
+      - name: Error handling and validation suite
+        working-directory: sqlsimstudio
+        run: ./full-test-suite.ps1 -SkipBuild -OfflineOnly
+
+      - name: Install browser test dependencies
+        working-directory: sqlsimstudio
+        run: |
+          npm install --no-audit --no-fund
+          ./node_modules/.bin/playwright.cmd install chromium firefox webkit
+
+      - name: Interface regression tests
+        working-directory: sqlsimstudio
+        env:
+          # Use Playwright's bundled browser so the runner needs no Edge or Chrome.
+          SQLSIMSTUDIO_BROWSER_CHANNEL: chromium
+        run: |
+          ./node_modules/.bin/playwright.cmd test `
+            --config gui-tests/playwright.config.cjs `
+            gui-tests/interface.spec.cjs gui-tests/configuration.spec.cjs
+
+      - name: Responsive layout sweep
+        working-directory: sqlsimstudio
+        env:
+          SQLSIMSTUDIO_BROWSER_CHANNEL: chromium
+        run: ./node_modules/.bin/playwright.cmd test --config gui-tests/responsive.config.cjs
+
+      - name: Upload failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: studio-gui-test-results
+          path: |
+            sqlsimstudio/build/gui-test-results
+            sqlsimstudio/build/responsive-test-results
+          if-no-files-found: ignore

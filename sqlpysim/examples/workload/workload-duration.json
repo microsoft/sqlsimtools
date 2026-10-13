@@ -1,0 +1,26 @@
+{
+    // Duration mode: run for a fixed time rather than a fixed iteration count.
+    //
+    // duration_seconds replaces iterations for every group in the file. A
+    // group may still declare iterations, but the value is ignored while a
+    // top-level duration is set, which is why none is given here.
+    //
+    // Useful when comparing drivers: both tools run for the same wall clock
+    // and the difference shows up as how much work each completed, rather
+    // than as how long each took to finish a fixed amount.
+    //
+    // Run with:
+    //   python sqlpysim.py -S localhost -d tempdb -E -workload examples/workload/workload-duration.json
+    "duration_seconds": 10,
+    "workloads": [
+        {
+            "queries": ["SELECT 1 AS SteadyLoad"],
+            "threads": 4
+        },
+        {
+            "queries": ["SELECT 2 AS PacedLoad"],
+            "threads": 2,
+            "think_time_ms": 50
+        }
+    ]
+}

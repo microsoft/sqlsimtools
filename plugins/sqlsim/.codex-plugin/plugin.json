@@ -1,0 +1,11 @@
+{
+  "name": "sqlsim",
+  "version": "1.0.0",
+  "description": "Guidance for running SQL queries, scripts, load tests, and measured multi-threaded workloads with the native sqlsim CLI.",
+  "author": {
+    "name": "Microsoft"
+  },
+  "repository": "https://github.com/microsoft/sqlsimtools",
+  "keywords": ["sql-server", "azure-sql", "load-testing", "benchmarking", "odbc"],
+  "skills": "./skills/"
+}

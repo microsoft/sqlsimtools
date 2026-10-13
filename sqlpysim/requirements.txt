@@ -1,0 +1,3 @@
+# mssql-python driver (Microsoft's native Python driver for SQL Server)
+# Update deliberately after running smoke and full compatibility suites.
+mssql-python==1.15.0

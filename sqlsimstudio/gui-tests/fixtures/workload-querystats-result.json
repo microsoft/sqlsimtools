@@ -1,0 +1,276 @@
+{
+  "version": "1.0.0",
+  "start_time": "2026-10-10T12:39:07.72",
+  "configuration": {
+    "odbc_driver": "ODBC Driver 18 for SQL Server",
+    "server": "localhost",
+    "database": "tempdb",
+    "authentication": "Windows",
+    "threads": 20,
+    "workload_file": "C:\\workloads\\workload.json",
+    "total_batches": 76,
+    "workload_groups": 2,
+    "workloads": [
+      {
+        "file": "C:\\workloads\\orders-by-customer-with-a-deliberately-long-script-name.sql",
+        "threads": 6,
+        "iterations": 4,
+        "batch_count": 2,
+        "batches": [
+          "SELECT o.name AS object_name, o.object_id, o.type_desc, s.name AS schema_name, o.create_date, o.modify_date FROM sys.objects AS o INNER JOIN sys.schemas AS s ON s.schema_id = o.schema_id WHERE o.is_ms_shipped = 1 ORDER BY o.object_id;",
+          "SELECT COUNT(*) AS column_count FROM sys.columns;"
+        ]
+      },
+      {
+        "file": "C:\\workloads\\audit.sql",
+        "threads": 14,
+        "iterations": 2,
+        "batch_count": 1,
+        "batches": [
+          "SELECT TOP (3) name FROM sys.databases ORDER BY name;"
+        ]
+      }
+    ],
+    "application_name": "sqlsim",
+    "retry_count": 0,
+    "quiet_mode": true,
+    "query_stats": true
+  },
+  "query_stats": {
+    "queries": [
+      {
+        "query": "SELECT o.name AS object_name, o.object_id, o.type_desc, s.name AS schema_name, o.create_date, o.modify_date FROM sys.objects AS o INNER JOIN sys.schemas AS s ON s.schema_id = o.schema_id WHERE o.is_ms_shipped = 1 ORDER BY o.object_id;",
+        "spids": [
+          56,
+          102,
+          106,
+          108,
+          110,
+          114
+        ],
+        "spid_count": 6,
+        "total_elapsed_ms": {
+          "avg": 9.723,
+          "min": 5.667,
+          "max": 11.965
+        },
+        "server_elapsed_ms": {
+          "avg": 7.667,
+          "min": 5.0,
+          "max": 11.0
+        },
+        "server_cpu_ms": {
+          "avg": 7.833,
+          "min": 0.0,
+          "max": 16.0
+        },
+        "server_elapsed_sum_ms": {
+          "avg": 7.667,
+          "min": 5.0,
+          "max": 11.0
+        },
+        "server_cpu_sum_ms": {
+          "avg": 7.833,
+          "min": 0.0,
+          "max": 16.0
+        },
+        "compile_elapsed_ms": {
+          "avg": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "logical_reads": {
+          "avg": 59.0,
+          "min": 59,
+          "max": 59
+        },
+        "physical_reads": {
+          "avg": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "read_ahead_reads": {
+          "avg": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "row_count": {
+          "avg": 118.0,
+          "min": 118,
+          "max": 118
+        },
+        "executions": 24,
+        "failures": 0
+      },
+      {
+        "query": "SELECT COUNT(*) AS column_count FROM sys.columns;",
+        "spids": [
+          56,
+          102,
+          106,
+          108,
+          110,
+          114
+        ],
+        "spid_count": 6,
+        "total_elapsed_ms": {
+          "avg": 3.594,
+          "min": 2.611,
+          "max": 4.772
+        },
+        "server_elapsed_ms": {
+          "avg": 2.0,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "server_cpu_ms": {
+          "avg": 0.667,
+          "min": 0.0,
+          "max": 16.0
+        },
+        "server_elapsed_sum_ms": {
+          "avg": 2.0,
+          "min": 1.0,
+          "max": 3.0
+        },
+        "server_cpu_sum_ms": {
+          "avg": 0.667,
+          "min": 0.0,
+          "max": 16.0
+        },
+        "compile_elapsed_ms": {
+          "avg": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "logical_reads": {
+          "avg": 29.0,
+          "min": 29,
+          "max": 29
+        },
+        "physical_reads": {
+          "avg": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "read_ahead_reads": {
+          "avg": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "row_count": {
+          "avg": 1.0,
+          "min": 1,
+          "max": 1
+        },
+        "executions": 24,
+        "failures": 0
+      },
+      {
+        "query": "SELECT TOP (3) name FROM sys.databases ORDER BY name;",
+        "spids": [
+          103,
+          104,
+          105,
+          107,
+          109,
+          111,
+          112,
+          113,
+          115,
+          116
+        ],
+        "spid_count": 14,
+        "total_elapsed_ms": {
+          "avg": 2.721,
+          "min": 0.793,
+          "max": 8.673
+        },
+        "server_elapsed_ms": {
+          "avg": 0.286,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "server_cpu_ms": {
+          "avg": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "server_elapsed_sum_ms": {
+          "avg": 0.286,
+          "min": 0.0,
+          "max": 1.0
+        },
+        "server_cpu_sum_ms": {
+          "avg": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "compile_elapsed_ms": {
+          "avg": 0.0,
+          "min": 0.0,
+          "max": 0.0
+        },
+        "logical_reads": {
+          "avg": 20.0,
+          "min": 20,
+          "max": 20
+        },
+        "physical_reads": {
+          "avg": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "read_ahead_reads": {
+          "avg": 0.0,
+          "min": 0,
+          "max": 0
+        },
+        "row_count": {
+          "avg": 3.0,
+          "min": 3,
+          "max": 3
+        },
+        "executions": 28,
+        "failures": 0
+      }
+    ],
+    "totals": {
+      "total_elapsed_ms": 395.794,
+      "server_elapsed_ms": 240.0,
+      "server_cpu_ms": 204.0,
+      "server_elapsed_sum_ms": 240.0,
+      "server_cpu_sum_ms": 204.0,
+      "compile_elapsed_ms": 0.0,
+      "logical_reads": 2672,
+      "physical_reads": 0,
+      "read_ahead_reads": 0,
+      "total_rows": 2940,
+      "executions": 76,
+      "failures": 0
+    }
+  },
+  "execution_elapsed_seconds": 0.058,
+  "connection_stats": {
+    "avg_ms": 91.75,
+    "min_ms": 79.0,
+    "max_ms": 99.0,
+    "count": 20
+  },
+  "metrics": {
+    "odbc_driver_version": "18.06.0002",
+    "total_runtime_seconds": 0.175,
+    "total_connection_time_seconds": 1.846,
+    "total_query_execution_time_seconds": 0.396,
+    "end_time": "2026-10-10T12:39:07.898",
+    "errors": {
+      "total": 0,
+      "list": []
+    },
+    "warnings": {
+      "total": 0,
+      "list": []
+    }
+  },
+  "success": true
+}

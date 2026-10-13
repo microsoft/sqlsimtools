@@ -1,0 +1,59 @@
+# Build directory
+build/
+build-*/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln
+*.vcxproj
+*.vcxproj.filters
+
+# Compiled binaries
+*.exe
+*.out
+*.app
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+
+# CMake generated
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+*.cmake
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Generated documentation
+*.html
+temp-style.css
+
+# Test output (keep fixtures, ignore generated output)
+full-test-results.txt
+testing/*.txt
+testing/*.json
+testing/*.xml
+# Keep test fixtures (override the *.xml exclusion above)
+!testing/clean-replay.xml
+!testing/replay-test-data.xml
+
+# Workspace files (personal preference)
+*.code-workspace

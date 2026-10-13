@@ -1,0 +1,8 @@
+version: 2
+updates:
+  # Actions only. Python dependencies are pinned deliberately and bumped by hand
+  # after the live validation required by DRIVER-COMPATIBILITY.md.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: quarterly

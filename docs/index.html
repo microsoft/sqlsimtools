@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <script>
+    if (!new URLSearchParams(window.location.search).has("scoutTheme")) {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  </script>
+  <title>sqlsimtools | SQL workload engineering</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    :root {
+      --cp-bg: #f5f6f8;
+      --cp-bg-elevated: #f2f4f6;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #eef1f3;
+      --cp-border: #d9dee3;
+      --cp-border-strong: #b8c0c7;
+      --cp-text: #172033;
+      --cp-text-muted: #5f6977;
+      --cp-text-soft: #7f8995;
+      --cp-accent: #003594;
+      --cp-accent-hover: #041e42;
+      --cp-accent-soft: #e9eef7;
+      --cp-accent-fg: #ffffff;
+      --cp-success: #19744b;
+      --cp-danger: #b53333;
+      --cp-link: #003594;
+      --cp-shadow: 0 1px 2px rgba(4, 30, 66, .05), 0 6px 18px rgba(4, 30, 66, .055);
+      --cp-overlay: rgba(255, 255, 255, .94);
+      --cp-panel: rgba(255, 255, 255, .86);
+      --cp-panel-strong: rgba(255, 255, 255, .98);
+      --cp-sheen: rgba(255, 255, 255, .55);
+      --cp-highlight: rgba(0, 53, 148, .12);
+    }
+    html[data-theme="dark"] {
+      --cp-bg: #080f18;
+      --cp-bg-elevated: #1a2736;
+      --cp-surface: #111a26;
+      --cp-surface-soft: #192635;
+      --cp-border: #34475a;
+      --cp-border-strong: #5b6d7d;
+      --cp-text: #eef4fb;
+      --cp-text-muted: #b3bfca;
+      --cp-text-soft: #8795a2;
+      --cp-accent: #5f9be5;
+      --cp-accent-hover: #dbe8f8;
+      --cp-accent-soft: #1c3150;
+      --cp-accent-fg: #080f18;
+      --cp-link: #5f9be5;
+      --cp-shadow: 0 1px 2px rgba(0, 0, 0, .28), 0 6px 18px rgba(0, 0, 0, .3);
+      --cp-overlay: rgba(17, 26, 38, .96);
+      --cp-panel: rgba(17, 26, 38, .86);
+      --cp-panel-strong: rgba(17, 26, 38, .98);
+      --cp-sheen: rgba(255, 255, 255, .04);
+      --cp-highlight: rgba(95, 155, 229, .2);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--cp-bg);
+      color: var(--cp-text);
+      font-family: "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    a { color: inherit; }
+    button { font: inherit; }
+    .shell { width: min(1280px, calc(100% - 48px)); margin: 0 auto; }
+    .nav-wrap {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-overlay);
+      backdrop-filter: blur(14px);
+    }
+    nav {
+      min-height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .brand { display: flex; align-items: center; text-decoration: none; }
+    .brand-logo { display: block; width: 174px; height: 36px; object-fit: contain; object-position: left center; }
+    html[data-theme="dark"] .brand-logo { filter: brightness(0) invert(1); }
+    .nav-links { display: flex; align-items: center; gap: 22px; }
+    .nav-links a { color: var(--cp-text-muted); font-size: 14px; text-decoration: none; }
+    .nav-links a:hover { color: var(--cp-text); }
+    .theme-button {
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      cursor: pointer;
+      padding: 8px 12px;
+    }
+    .hero {
+      padding: 38px 0 34px;
+      display: grid;
+      grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr);
+      gap: 48px;
+      align-items: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--cp-border);
+      border-radius: 999px;
+      background: var(--cp-surface);
+      color: var(--cp-text-muted);
+      padding: 7px 12px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cp-success); }
+    h1 {
+      max-width: 760px;
+      margin: 14px 0 12px;
+      font-size: clamp(38px, 5vw, 54px);
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+    h1 em { color: var(--cp-link); font-style: normal; }
+    .lede {
+      max-width: 680px;
+      margin: 0;
+      color: var(--cp-text-muted);
+      font-size: 16px;
+      line-height: 1.45;
+    }
+    .actions { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 10px; }
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 40px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 0 16px;
+      background: var(--cp-surface);
+      color: var(--cp-text);
+      font-weight: 700;
+      text-decoration: none;
+    }
+    .button.primary { border-color: var(--cp-link); background: var(--cp-link); color: var(--cp-accent-fg); }
+    .button.primary:hover { border-color: var(--cp-border-strong); }
+    .terminal {
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--cp-surface);
+      box-shadow: var(--cp-shadow);
+    }
+    .terminal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--cp-border);
+      padding: 12px 14px;
+      color: var(--cp-text-muted);
+      font-size: 12px;
+    }
+    .terminal-body {
+      min-height: 190px;
+      padding: 16px;
+      background: var(--cp-bg-elevated);
+      font-family: Consolas, "Courier New", Courier, monospace;
+      font-size: 12px;
+      line-height: 1.6;
+      overflow: auto;
+    }
+    .prompt { color: var(--cp-link); }
+    .muted { color: var(--cp-text-muted); }
+    .success { color: var(--cp-success); }
+    .copy {
+      border: 0;
+      background: transparent;
+      color: var(--cp-link);
+      cursor: pointer;
+      font-size: 12px;
+    }
+    section { padding: 38px 0; }
+    .section-head { max-width: 720px; margin-bottom: 18px; }
+    .section-head h2 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.03em; }
+    .section-head p { margin: 0; color: var(--cp-text-muted); font-size: 15px; line-height: 1.4; }
+    .ways { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+    .card {
+      min-height: 188px;
+      padding: 16px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+      display: flex;
+      flex-direction: column;
+    }
+    .card:hover { border-color: var(--cp-border-strong); }
+    .card-index {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      border-radius: 10px;
+      background: var(--cp-surface-soft);
+      color: var(--cp-link);
+      font-weight: 800;
+    }
+    .card h3 { margin: 12px 0 6px; font-size: 18px; }
+    .card p { margin: 0; color: var(--cp-text-muted); font-size: 14px; line-height: 1.45; }
+    .card a { margin-top: auto; padding-top: 12px; color: var(--cp-link); font-size: 14px; text-decoration: none; font-weight: 700; }
+    .platform-band {
+      border-top: 1px solid var(--cp-border);
+      border-bottom: 1px solid var(--cp-border);
+      background: var(--cp-bg-elevated);
+    }
+    .platform-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 50px; align-items: center; }
+    .checks { display: grid; gap: 10px; }
+    .check {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 11px 14px;
+      background: var(--cp-surface);
+    }
+    .check-icon { color: var(--cp-success); font-weight: 900; }
+    .quickstart { display: grid; grid-template-columns: .8fr 1.2fr; gap: 54px; align-items: start; }
+    .steps { display: grid; gap: 10px; }
+    .step {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 14px;
+      align-items: start;
+      padding: 14px;
+      border: 1px solid var(--cp-border);
+      border-radius: 16px;
+      background: var(--cp-surface);
+    }
+    .step strong { display: block; margin-bottom: 4px; }
+    .step strong a { color: var(--cp-link); text-decoration: none; }
+    .step strong a:hover { text-decoration: underline; }
+    .step span { color: var(--cp-text-muted); font-size: 14px; line-height: 1.4; }
+    footer { border-top: 1px solid var(--cp-border); padding: 22px 0 30px; color: var(--cp-text-muted); font-size: 12px; }
+    .footer-row { display: flex; justify-content: space-between; gap: 20px; }
+    .footer-links { display: flex; gap: 18px; }
+    .footer-links a { color: var(--cp-text-muted); text-decoration: none; }
+    @media (max-width: 920px) {
+      .hero, .platform-grid, .quickstart { grid-template-columns: 1fr; }
+      .ways { grid-template-columns: repeat(2, 1fr); }
+      .hero { padding-top: 32px; }
+      .nav-links a { display: none; }
+    }
+    @media (max-width: 580px) {
+      .shell { width: min(100% - 24px, 1280px); }
+      .ways { grid-template-columns: 1fr; }
+      .footer-row { align-items: flex-start; flex-direction: column; }
+      h1 { font-size: 38px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="nav-wrap">
+    <nav class="shell">
+      <a class="brand" href="#top">
+        <img class="brand-logo" src="assets/sqlsimtools-logo.svg" alt="sqlsimtools - SQL Workload Simulation Tools">
+      </a>
+      <div class="nav-links">
+        <a href="#ways">Tools</a>
+        <a href="#quickstart">Get started</a>
+        <a href="#platforms">Platforms</a>
+        <a href="https://github.com/microsoft/sqlsimtools">GitHub</a>
+        <button class="theme-button" id="theme-toggle" type="button">Dark mode</button>
+      </div>
+    </nav>
+  </div>
+
+  <main id="top">
+    <div class="shell hero">
+      <div>
+        <span class="eyebrow"><span class="dot"></span> Public Preview</span>
+        <h1>Test SQL workloads.<br><em>Your way.</em></h1>
+        <p class="lede">Build, run, monitor, replay, and compare SQL Server workloads with a visual Studio, a native CLI, Python, or an AI workload agent.</p>
+        <div class="actions">
+          <a class="button primary" href="https://github.com/microsoft/sqlsimtools/releases/latest">Download latest release →</a>
+          <a class="button" href="https://github.com/microsoft/sqlsimtools">View on GitHub</a>
+        </div>
+      </div>
+      <div class="terminal" aria-label="sqlsim command example">
+        <div class="terminal-head"><span>Quick workload</span><button class="copy" id="copy-command" type="button">Copy command</button></div>
+        <div class="terminal-body">
+          <div><span class="prompt">PS&gt;</span> <span id="command">.\sqlsim\x64\sqlsim.exe -S localhost -E -Q "SELECT @@VERSION"</span></div>
+          <br>
+          <div class="muted">Connecting with Windows authentication...</div>
+          <div class="success">Connected successfully (18 ms)</div>
+          <div class="muted">ODBC Driver 18.5 · SQL Server 2025</div>
+          <br>
+          <div>Total executions&nbsp;&nbsp;&nbsp; 1</div>
+          <div>Total runtime&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.041 sec</div>
+          <div>Throughput&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 24.39 exec/sec</div>
+        </div>
+      </div>
+    </div>
+
+    <section id="ways" class="shell">
+      <div class="section-head">
+        <h2>Four ways to work</h2>
+        <p>Start visually, automate from the command line, compare drivers, or describe the experiment in plain language.</p>
+      </div>
+      <div class="ways">
+        <article class="card">
+          <span class="card-index">1</span>
+          <h3>sqlsim Studio</h3>
+          <p>Configure, monitor, replay, and compare workloads in a self-contained local browser app.</p>
+          <a href="#">Explore Studio →</a>
+        </article>
+        <article class="card">
+          <span class="card-index">2</span>
+          <h3>sqlsim</h3>
+          <p>Native C++ and ODBC for low-overhead scripts, concurrent load tests, and replay.</p>
+          <a href="#">Read the CLI guide →</a>
+        </article>
+        <article class="card">
+          <span class="card-index">3</span>
+          <h3>sqlpysim</h3>
+          <p>A Python workflow powered by Microsoft's mssql-python driver for automation and comparison.</p>
+          <a href="#">See Python examples →</a>
+        </article>
+        <article class="card">
+          <span class="card-index">4</span>
+          <h3>Workload Builder</h3>
+          <p>Use GitHub Copilot and other agents to design and compare experiments from plain-language requests.</p>
+          <a href="#">Use with agents →</a>
+        </article>
+      </div>
+    </section>
+
+    <div id="platforms" class="platform-band">
+      <section class="shell platform-grid">
+        <div class="section-head">
+          <h2>One toolkit, every SQL Server target</h2>
+          <p>Use the same workload patterns across local development, Azure, and Microsoft Fabric.</p>
+        </div>
+        <div class="checks">
+          <div class="check"><span class="check-icon">✓</span><span>SQL Server 2019, 2022, and 2025</span></div>
+          <div class="check"><span class="check-icon">✓</span><span>Azure SQL Database and Managed Instance</span></div>
+          <div class="check"><span class="check-icon">✓</span><span>SQL database in Microsoft Fabric</span></div>
+          <div class="check"><span class="check-icon">✓</span><span>Windows and Ubuntu Public Preview paths</span></div>
+        </div>
+      </section>
+    </div>
+
+    <section id="quickstart" class="shell quickstart">
+      <div class="section-head">
+        <h2>From download to first result</h2>
+        <p>No hosted service. No telemetry sent elsewhere. The tools run locally and connect directly to the SQL target you choose.</p>
+      </div>
+      <div class="steps">
+        <div class="step"><span class="card-index">1</span><div><strong><a href="https://github.com/microsoft/sqlsimtools/blob/main/INSTALL.md">Install the prerequisite →</a></strong><span>ODBC Driver 18 for sqlsim and Studio; Python 3.10+ for sqlpysim.</span></div></div>
+        <div class="step"><span class="card-index">2</span><div><strong><a href="https://github.com/microsoft/sqlsimtools/releases/latest">Download one package →</a></strong><span>Choose the complete Windows bundle or an individual command-line tool.</span></div></div>
+        <div class="step"><span class="card-index">3</span><div><strong><a href="https://github.com/microsoft/sqlsimtools#get-started">Choose one of four paths →</a></strong><span>Studio, native ODBC, mssql-python, or the Workload Builder agent.</span></div></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="shell footer-row">
+      <span>MIT licensed · Community supported · Not an official Microsoft product</span>
+      <span class="footer-links"><a href="https://github.com/microsoft/sqlsimtools#readme">Documentation</a><a href="https://github.com/microsoft/sqlsimtools/discussions">Discussions</a><a href="https://github.com/microsoft/sqlsimtools/security/policy">Security</a></span>
+    </div>
+  </footer>
+
+  <script>
+    const themeToggle = document.getElementById("theme-toggle");
+    function updateThemeLabel() {
+      themeToggle.textContent =
+        document.documentElement.getAttribute("data-theme") === "dark" ? "Light mode" : "Dark mode";
+    }
+    updateThemeLabel();
+    themeToggle.addEventListener("click", () => {
+      const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      updateThemeLabel();
+    });
+    document.getElementById("copy-command").addEventListener("click", async (event) => {
+      await navigator.clipboard.writeText(document.getElementById("command").textContent);
+      event.currentTarget.textContent = "Copied";
+      window.setTimeout(() => { event.currentTarget.textContent = "Copy command"; }, 1200);
+    });
+  </script>
+</body>
+</html>

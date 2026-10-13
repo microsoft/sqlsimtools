@@ -1,0 +1,28 @@
+{
+    // Basic mixed workload for sqlpysim.
+    //
+    // Two groups with different shapes, so the run proves groups expand
+    // independently rather than sharing one thread count. Total connections
+    // is the sum of the groups, 3 here, not the -n value, which workload mode
+    // ignores.
+    //
+    // Uses inline queries rather than a "file" reference so it runs from any
+    // working directory. A file reference is resolved relative to the process
+    // working directory, not to this file.
+    //
+    // Run with:
+    //   python sqlpysim.py -S localhost -d tempdb -E -workload examples/workload/workload-basic.json
+    "workloads": [
+        {
+            "queries": ["SELECT 1 AS ReadGroup"],
+            "threads": 2,
+            "iterations": 5
+        },
+        {
+            "queries": ["SELECT 2 AS WriteGroup", "SELECT 3 AS WriteGroupSecondBatch"],
+            "threads": 1,
+            "iterations": 5,
+            "think_time_ms": 10
+        }
+    ]
+}

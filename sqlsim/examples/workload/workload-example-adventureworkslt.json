@@ -1,0 +1,27 @@
+{
+    // Mixed workload: simulates concurrent OLTP and reporting activity
+    // Use with: sqlsim -S localhost -E -workload examples\workload\workload-example-adventureworkslt.json
+    "workloads": [
+        {
+            // OLTP-style: lightweight queries on 4 threads, 100 iterations each
+            "file": "examples\\sql\\01-simple-queries.sql",
+            "threads": 4,
+            "iterations": 100
+        },
+        {
+            // Reporting: heavier queries on 2 threads, 10 iterations each
+            "file": "examples\\sql\\05-aggregation-queries-adventureworkslt.sql",
+            "threads": 2,
+            "iterations": 10
+        },
+        {
+            // Inline monitoring queries on 1 thread, running continuously
+            "queries": [
+                "SELECT DB_NAME() AS DatabaseName, GETDATE() AS CheckTime",
+                "SELECT COUNT(*) AS SessionCount FROM sys.dm_exec_sessions WHERE is_user_process = 1"
+            ],
+            "threads": 1,
+            "iterations": 50
+        }
+    ]
+}
