@@ -89,7 +89,7 @@ Invoke-WebRequest -Uri "https://aka.ms/vs/17/release/vs_buildtools.exe" -OutFile
 - Run installer with default settings
 - Required for connecting to SQL Server/Azure SQL
 
-Current documented baseline is ODBC Driver 18.6.2.1. For ongoing policy and cadence, see [../DRIVER-COMPATIBILITY.md](../DRIVER-COMPATIBILITY.md).
+Current documented baseline is ODBC Driver 18.7.1.1. For ongoing policy and cadence, see [../DRIVER-COMPATIBILITY.md](../DRIVER-COMPATIBILITY.md).
 
 ### 4. CMake (if not included with Build Tools)
 **Download:** https://cmake.org/download/

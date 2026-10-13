@@ -382,12 +382,13 @@ try {
         $queryPayload.mode = 'query'
         $queryPayload.query = 'SELECT 1 AS StudioSmokeTest'
         $queryRun = Invoke-StudioRun -Payload $queryPayload -Name 'Query'
-        if (-not $queryRun.result.server_version -or -not $queryRun.result.server_edition -or
-            -not $queryRun.result.connection_string) {
-            throw 'Final-result runs must pass -v so exported JSON carries server and connection detail.'
+        if (-not $queryRun.result.server_version -or -not $queryRun.result.server_edition) {
+            throw 'Final-result runs must report the SQL Server version and edition.'
         }
-        if ($queryRun.result.connection_string -match '(PWD|UID|AccessToken)=(?!\*)') {
-            throw 'Verbose JSON exposed an unmasked credential.'
+        # Final-result runs omit -v so per-execution detail does not inflate the
+        # result; -v is the only source of the echoed connection string.
+        if ($queryRun.result.connection_string) {
+            throw 'Final-result runs must not pass -v.'
         }
 
         $connectionTestPayload = $baseRunPayload.Clone()
