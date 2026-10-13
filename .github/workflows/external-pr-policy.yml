@@ -9,11 +9,7 @@ permissions:
 
 jobs:
   redirect-to-issues:
-    if: >-
-      github.event.pull_request.author_association != 'OWNER' &&
-      github.event.pull_request.author_association != 'MEMBER' &&
-      github.event.pull_request.author_association != 'COLLABORATOR' &&
-      github.event.pull_request.user.login != 'dependabot[bot]'
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -24,6 +20,27 @@ jobs:
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8
         with:
           script: |
+            // Only repository admins may keep pull requests open during Public
+            // Preview. Check the author's effective permission rather than
+            // author_association, which reports org-granted admins as MEMBER.
+            const author = context.payload.pull_request.user.login;
+            let role = 'none';
+            try {
+              const { data } = await github.rest.repos.getCollaboratorPermissionLevel({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                username: author
+              });
+              role = data.role_name || data.permission || 'none';
+            } catch (error) {
+              core.info(`Could not read permission for ${author}: ${error.message}`);
+            }
+            if (role === 'admin') {
+              core.info(`${author} is a repository admin; leaving the pull request open.`);
+              return;
+            }
+            core.info(`${author} has role ${role}; redirecting to issues.`);
+
             const marker = '<!-- sqlsimtools-public-preview-pr-policy -->';
             const message = `${marker}
             Thank you for your interest in sqlsimtools.
