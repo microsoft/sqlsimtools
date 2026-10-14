@@ -14,8 +14,13 @@ its tools.
 | `sqlsimstudio-blog-hero.png` | Blog and social posts |
 | `sqlsimtools-four-ways.png` | Root README; four-quadrant Studio, CLI, and GitHub Copilot overview |
 | `sqlsimtools-four-ways-blog.png` | 2.4:1 four-quadrant blog banner |
-| `sqlsimtools-social-preview.png` | 1280x640 GitHub social preview (Settings > General > Social preview); the four-quadrant banner padded to 2:1 |
+| `sqlsimtools-social-preview.png` | 1280x640 GitHub social preview (Settings > General > Social preview); the four-quadrant banner padded to 2:1. Also copied to `docs/assets/` for the GitHub Pages link-preview image |
 | `querystats-report.png` | sqlsim manual |
+
+The GitHub Pages site serves only `docs/`, so `docs/assets/` keeps copies of
+`sqlsimtools-logo.svg`, `sqlsim-icon.svg` (site icon), and
+`sqlsimtools-social-preview.png`. Update those copies when you change the
+originals.
 
 ## Design Elements
 

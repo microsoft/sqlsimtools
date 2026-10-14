@@ -7,8 +7,10 @@
 <h1 align="center">SQL Workload Engineering</h1>
 
 <p align="center">
-  Native and Python workload engines, a local browser studio, and agent guidance
-  for repeatable SQL Server performance experiments.
+  Open-source load testing and benchmarking tools for SQL Server, Azure SQL,
+  and SQL database in Microsoft Fabric: native and Python workload engines, a
+  local browser studio, and agent guidance for repeatable performance
+  experiments.
 </p>
 
 <p align="center">

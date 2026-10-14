@@ -1,0 +1,42 @@
+# sqlsimtools
+
+> Open-source load testing, benchmarking, and workload simulation tools for SQL Server 2019, 2022, and 2025, Azure SQL Database, Azure SQL Managed Instance, and SQL database in Microsoft Fabric. MIT licensed and community supported; not an official Microsoft product.
+
+sqlsimtools offers four ways to run the same kinds of SQL workloads:
+
+- **sqlsim**: a native C++ command-line tool using Microsoft ODBC Driver 18 for low-overhead queries, scripts, concurrent load tests, and workload replay. Public Preview on Windows and Ubuntu x64.
+- **sqlpysim**: a Python command-line port of sqlsim built on Microsoft's `mssql-python` driver. Public Preview; shares sqlsim's core workload interface with documented compatibility gaps.
+- **sqlsim Studio**: a self-contained local browser app that configures, runs, monitors, replays, and compares sqlsim and sqlpysim workloads. Public Preview on Windows x64.
+- **sqlsimtools Workload Builder**: a GitHub Copilot custom agent, plus Agent Skills for Copilot, Claude Code, Codex, Cursor, and other clients, that designs, runs, and compares workloads from plain-language requests.
+
+Every command must specify authentication: `-E` (Windows), `-A` (Microsoft Entra), `-T <token>` (access token), or `-U`/`-P` (SQL login). Results can be written as JSON with `-json`. Download releases from https://github.com/microsoft/sqlsimtools/releases/latest.
+
+## Docs
+
+- [README](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/README.md): Overview, the four ways to work, and getting started
+- [Install](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/INSTALL.md): Release packages, prerequisites, extraction, verification, and upgrades
+- [Project guide](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/PROJECT-GUIDE.md): Tools, platform support, prerequisites, authentication, reports, and plugins
+- [FAQ](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/FAQ.md): Support, privacy, platform status, and comparison with other tools
+- [Driver compatibility](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/DRIVER-COMPATIBILITY.md): Validated ODBC Driver 18 and mssql-python versions
+- [Release notes](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/RELEASE-NOTES.md): Known issues and preview status by platform
+
+## Tool references
+
+- [sqlsim manual](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/sqlsim/sqlsim.md): Native CLI options, workload formats, replay, metrics, and JSON output
+- [sqlpysim manual](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/sqlpysim/sqlpysim.md): Python CLI options, driver behavior, and differences from sqlsim
+- [sqlsim Studio guide](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/sqlsimstudio/README.md): Browser workflows, configuration profiles, and platform status
+
+## Agent guidance
+
+- [Using sqlsimtools with agents](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/USING-WITH-AGENTS.md): Skills, Agent Plugins, portable AGENTS.md, and the Workload Builder
+- [sqlsim AGENTS.md](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/sqlsim/AGENTS.md): Rules for agents invoking the released sqlsim binary
+- [sqlpysim AGENTS.md](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/sqlpysim/AGENTS.md): Rules for agents invoking the released sqlpysim tool
+- [sqlsim skill](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/.github/skills/sqlsim/SKILL.md): When and how to use sqlsim
+- [sqlpysim skill](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/.github/skills/sqlpysim/SKILL.md): When and how to use sqlpysim
+- [sqlsim Studio skill](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/.github/skills/sqlsimstudio/SKILL.md): Installing, running, and troubleshooting sqlsim Studio
+
+## Optional
+
+- [Build from source](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/BUILDING.md): Build scripts, tests, and release validation
+- [Support](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/SUPPORT.md): Where to get help
+- [Security](https://raw.githubusercontent.com/microsoft/sqlsimtools/main/SECURITY.md): Reporting vulnerabilities
