@@ -3169,9 +3169,9 @@ sqlsim.exe -S localhost -T "not-a-valid-token"
 #### File Errors
 
 ```powershell
-# Cannot open input file
+# Cannot open input file (the operating system's reason follows the path)
 sqlsim.exe -S localhost -E -i nonexistent.sql
-# Output: Error: Cannot open input file: nonexistent.sql
+# Output: Error: Cannot open input file: nonexistent.sql (No such file or directory)
 
 # Empty file or no valid SQL
 sqlsim.exe -S localhost -E -i empty.sql
@@ -3179,12 +3179,18 @@ sqlsim.exe -S localhost -E -i empty.sql
 
 # Cannot open workload file
 sqlsim.exe -S localhost -E -workload missing.json
-# Output: sqlsim error: Cannot open workload file: missing.json
+# Output: Error: Cannot open workload file: missing.json (No such file or directory)
 
 # Cannot create output file
 sqlsim.exe -S localhost -E -Q "SELECT 1" -o "C:\InvalidPath\output.txt"
-# Output: sqlsim error: Cannot open output file: C:\InvalidPath\output.txt
+# Output: sqlsim error: Cannot open output file: C:\InvalidPath\output.txt (No such file or directory)
+
+# Windows path longer than 259 characters
+sqlsim.exe -S localhost -E -i "C:\very\long\...\script.sql"
+# Output: Error: Cannot open input file: C:\very\long\...\script.sql (the full path is 300 characters; Windows allows 259 unless the path starts with \\?\)
 ```
+
+sqlsim does not limit path length itself; the operating system does. On Windows, a full path longer than 259 characters works when written with the `\\?\` prefix, for example `-i "\\?\C:\very\long\...\script.sql"`. Linux allows 4,095 characters and macOS 1,023.
 
 #### Query Validation Errors
 
@@ -4102,9 +4108,11 @@ sqlsim displays two types of error messages:
 - Timeout must be numeric and between 0-86400 (24 hours)
 - Use: `-t 30` for 30 seconds
 
-**"sqlsim error: Cannot open output file: filename"**
+**"sqlsim error: Cannot open output file: filename (reason)"**
+- The reason in parentheses comes from the operating system, for example `No such file or directory` or `Permission denied`
 - File path is incorrect or file cannot be written
 - Use absolute path or correct relative path: `-o C:\output.txt`
+- On Windows, a reason of `the full path is N characters; Windows allows 259...` means the path is too long; shorten it or prefix it with `\\?\`
 
 **"sqlsim fatal error: ..."**
 

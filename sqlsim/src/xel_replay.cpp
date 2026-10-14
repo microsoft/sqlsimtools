@@ -1,4 +1,5 @@
 #include "xel_replay.h"
+#include "file_open_error.h"
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -909,9 +910,11 @@ void XelReplayParser::groupEventsBySessions() {
 
 bool XelReplayParser::parseFile(const std::string& filePath, std::string& errorMsg) {
     // Read the entire file
+    errno = 0;
     std::ifstream file(filePath, std::ios::binary);
     if (!file.is_open()) {
-        errorMsg = "Cannot open replay file: " + filePath;
+        const int openError = errno;
+        errorMsg = "Cannot open replay file: " + filePath + " (" + describeFileOpenFailure(filePath, openError) + ")";
         return false;
     }
     

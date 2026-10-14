@@ -1,4 +1,5 @@
 #include "command_line_parser.h"
+#include "file_open_error.h"
 #include "platform_capabilities.h"
 #include "workload_config.h"
 #include <iostream>
@@ -244,10 +245,6 @@ bool CommandLineParser::validateFilePath(const std::string& value, std::string& 
         errorMsg = "sqlsim error: Invalid file path format";
         return false;
     }
-    if (value.length() > 4096) {
-        errorMsg = "sqlsim error: File path exceeds maximum length";
-        return false;
-    }
     return true;
 }
 
@@ -326,10 +323,6 @@ bool CommandLineParser::validateReplayFile(const std::string& value, std::string
     }
     if (value.find('\0') != std::string::npos) {
         errorMsg = "sqlsim error: Invalid replay file path format";
-        return false;
-    }
-    if (value.length() > 4096) {
-        errorMsg = "sqlsim error: Replay file path exceeds maximum length";
         return false;
     }
     return true;
@@ -1208,9 +1201,12 @@ ParseResult CommandLineParser::parse(int argc, char* argv[], WorkloadConfig& con
     
     // Load queries from input file if specified
     if (!inputFile.empty() && !hasQueryOption) {
+        errno = 0;
         std::ifstream file(inputFile);
         if (!file.is_open()) {
-            return ParseResult::error("Error: Cannot open input file: " + inputFile);
+            const int openError = errno;
+            return ParseResult::error("Error: Cannot open input file: " + inputFile + " (" +
+                                      describeFileOpenFailure(inputFile, openError) + ")");
         }
         
         std::stringstream buffer;
@@ -1242,9 +1238,12 @@ ParseResult CommandLineParser::parse(int argc, char* argv[], WorkloadConfig& con
             
             // If entry uses a file, load it now
             if (!entry.file.empty()) {
+                errno = 0;
                 std::ifstream wfile(entry.file);
                 if (!wfile.is_open()) {
-                    return ParseResult::error("Error: Cannot open workload script file: " + entry.file);
+                    const int openError = errno;
+                    return ParseResult::error("Error: Cannot open workload script file: " + entry.file + " (" +
+                                              describeFileOpenFailure(entry.file, openError) + ")");
                 }
                 std::stringstream wbuf;
                 wbuf << wfile.rdbuf();

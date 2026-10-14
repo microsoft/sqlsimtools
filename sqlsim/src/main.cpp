@@ -12,6 +12,7 @@
 #include "timestamp_helper.h"
 #include "json_output.h"
 #include "xel_replay.h"
+#include "file_open_error.h"
 #include "version.h"
 
 std::string maskCommandConnectionString(const std::string& connectionString) {
@@ -337,9 +338,12 @@ int main(int argc, char* argv[]) {
         }
         TS_OUT << "Connecting to " << connectTarget << "..." << std::endl;
         
+        errno = 0;
         outputFileStream.open(config.outputFile);
         if (!outputFileStream.is_open()) {
-            TS_ERR << "sqlsim error: Cannot open output file: " << config.outputFile << std::endl;
+            const int openError = errno;
+            TS_ERR << "sqlsim error: Cannot open output file: " << config.outputFile << " ("
+                   << describeFileOpenFailure(config.outputFile, openError) << ")" << std::endl;
             return 1;
         }
         coutBackup = std::cout.rdbuf();
@@ -720,9 +724,12 @@ int main(int argc, char* argv[]) {
         
         std::ofstream finalJsonStream;
         if (config.streamJsonOutput && config.finalJsonOutput) {
+            errno = 0;
             finalJsonStream.open(config.outputFile, std::ios::trunc);
             if (!finalJsonStream.is_open()) {
-                TS_ERR << "sqlsim error: Cannot open final JSON file: " << config.outputFile << std::endl;
+                const int openError = errno;
+                TS_ERR << "sqlsim error: Cannot open final JSON file: " << config.outputFile << " ("
+                       << describeFileOpenFailure(config.outputFile, openError) << ")" << std::endl;
                 return 1;
             }
         }

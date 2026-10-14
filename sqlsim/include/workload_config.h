@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <algorithm>
 #include <cctype>
+#include "file_open_error.h"
 
 /**
  * A single workload entry from a workload JSON file.
@@ -53,9 +54,12 @@ public:
      */
     static std::vector<WorkloadEntry> parse(const std::string& filePath) {
         // Read file content
+        errno = 0;
         std::ifstream file(filePath);
         if (!file.is_open()) {
-            throw std::runtime_error("Cannot open workload file: " + filePath);
+            const int openError = errno;
+            throw std::runtime_error("Cannot open workload file: " + filePath + " (" +
+                                     describeFileOpenFailure(filePath, openError) + ")");
         }
         
         std::stringstream buffer;

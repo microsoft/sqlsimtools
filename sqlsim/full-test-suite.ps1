@@ -915,11 +915,12 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "SECURITY VALIDATION TESTS" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
-# Test 13: Excessive file path length
+# Test 13: Excessive file path length. sqlsim does not cap path length itself;
+# the error must name the Windows 259-character limit instead of "not found".
 $longPath = "x" * 5000 + ".sql"
-Test-Command -Name "Path Length Validation" -Description "Reject excessively long file paths" `
+Test-Command -Name "Path Length Validation" -Description "Explain an input path longer than the operating system allows" `
     -Command { Invoke-Sqlsim -i $longPath } `
-    -ExpectedError "File path.*maximum length|Invalid file path" `
+    -ExpectedError "Cannot open input file: .*Windows allows 259" `
     -ShouldFail $true
 
 # Test 14: File path with null byte

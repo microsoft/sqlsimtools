@@ -1,4 +1,5 @@
 #include "workload_simulator.h"
+#include "file_open_error.h"
 #include "platform_termination.h"
 #include "timestamp_helper.h"
 #include "version.h"
@@ -1965,9 +1966,12 @@ void WorkloadSimulator::writeQueryStatsSnapshot(bool isFinal) const {
         tempName << config_.queryStatsFile << ".tmp." << std::hex << nonce;
         const std::string tempFile = tempName.str();
         {
+            errno = 0;
             std::ofstream ofs(tempFile, std::ios::binary | std::ios::trunc);
             if (!ofs.is_open()) {
-                reportSnapshotFailure("the file could not be opened for writing");
+                const int openError = errno;
+                reportSnapshotFailure("the file could not be opened for writing (" +
+                                      describeFileOpenFailure(tempFile, openError) + ")");
                 return;
             }
             ofs << json.str();

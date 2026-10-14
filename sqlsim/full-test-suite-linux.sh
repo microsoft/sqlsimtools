@@ -531,7 +531,7 @@ test_cmd "Connection Test Threads And Iterations" "Test connection-only mode wit
 
 section "SECURITY VALIDATION TESTS"
 
-test_cmd "Path Length Validation" "Reject excessively long file paths" 1 "File path.*maximum length|Invalid file path" -- \
+test_cmd "Path Length Validation" "Explain an input path longer than the operating system allows" 1 "Cannot open input file: .*File name too long" -- \
   "${BASE[@]}" "${AUTH[@]}" -i "$(printf 'x%.0s' $(seq 5000)).sql"
 test_cmd "Null Byte Validation" "Reject file paths with null bytes" 1 "Cannot open input file" -- \
   "${BASE[@]}" "${AUTH[@]}" -i "test.sql.missing"
