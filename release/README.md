@@ -33,7 +33,7 @@ as evidence that a release artifact is correct.
 | `build-sqlsimtools-bundle.ps1` | Assembles the Windows sqlsimtools bundle containing Studio and both engines |
 | `validate-package-layout.ps1` | Validates an extracted tool package and its documented entry points |
 | `check-release-version.ps1` | Confirms version parity across every shipped tool |
-| `stage-release-assets.ps1` | Stages the public release assets, adding a version-free copy of each for the README's latest-download links |
+| `stage-release-assets.ps1` | Stages the five versioned public release assets; the README links to the latest release page |
 | `check-driver-updates.ps1` | Checks pinned and documented SQL driver versions |
 | `OverlayInstall.psm1` | Shared safe overlay-install implementation |
 | `test-overlay-install.ps1` | Windows overlay-install behavior tests |

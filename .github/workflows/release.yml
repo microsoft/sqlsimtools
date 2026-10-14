@@ -455,8 +455,8 @@ jobs:
       - name: Stage release assets
         shell: pwsh
         run: |
-          # Adds a version-free copy of each package so the README can link to
-          # releases/latest/download/<name> without changing every release.
+          # Attaches the five versioned packages; the README links to the
+          # latest release page rather than to fixed file names.
           & ./release/stage-release-assets.ps1 `
             -ArtifactDirectory (Join-Path $env:RUNNER_TEMP 'all') `
             -OutputDirectory (Join-Path $env:RUNNER_TEMP 'release-assets') `

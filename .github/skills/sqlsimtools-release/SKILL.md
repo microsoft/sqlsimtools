@@ -27,13 +27,10 @@ and the sqlpysim archive, unchanged.
 | `sqlpysim-<ver>-src.zip` | `sqlpysim/publish.ps1` | windows-latest |
 | `sqlsimtools-<ver>-win-x64.zip` | `release/build-sqlsimtools-bundle.ps1` from the sqlsim x64 and sqlpysim archives plus `sqlsimstudio/build.ps1` output | windows-latest |
 
-`release/stage-release-assets.ps1` attaches each of these twice: with the
-version, and with it removed (`sqlsimtools-win-x64.zip`, `sqlsim-win-x64.zip`,
-`sqlsim-win-arm64.zip`, `sqlsim-linux-x64.tar.gz`, `sqlpysim-src.zip`). The
-version-free names give the README fixed links of the form
-`releases/latest/download/<name>` that always serve the newest published
-release, so the README never needs a version edit. The script fails if any
-package is missing.
+`release/stage-release-assets.ps1` attaches these five versioned packages and
+nothing else. The README links to `releases/latest`, the newest published
+release page, so it never needs a version edit. The script fails if any package
+is missing.
 
 The workflow also builds and validates
 `sqlsimstudio-<ver>-linux-x64.tar.gz` as an Actions artifact for invited

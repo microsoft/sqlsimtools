@@ -58,18 +58,16 @@ Managed Instance, and SQL database in Microsoft Fabric.
 is required by sqlsim and sqlsim Studio. sqlpysim also needs Python 3.10 or
 later.
 
-**2. Download one package** from the latest release:
+**2. Download one package** from the **[latest release](https://github.com/microsoft/sqlsimtools/releases/latest)**, under **Assets**:
 
 | You want | Download |
 | --- | --- |
-| Everything: sqlsim Studio plus both command-line engines, Windows x64 | [sqlsimtools-win-x64.zip](https://github.com/microsoft/sqlsimtools/releases/latest/download/sqlsimtools-win-x64.zip) |
-| The native command-line tool | [Windows x64](https://github.com/microsoft/sqlsimtools/releases/latest/download/sqlsim-win-x64.zip), [Windows ARM64](https://github.com/microsoft/sqlsimtools/releases/latest/download/sqlsim-win-arm64.zip), or [Ubuntu x64](https://github.com/microsoft/sqlsimtools/releases/latest/download/sqlsim-linux-x64.tar.gz) |
-| The Python command-line tool, Windows or Ubuntu | [sqlpysim-src.zip](https://github.com/microsoft/sqlsimtools/releases/latest/download/sqlpysim-src.zip) |
+| Everything: sqlsim Studio plus both command-line engines, Windows x64 | `sqlsimtools-<version>-win-x64.zip` |
+| The native command-line tool | `sqlsim-<version>-win-x64.zip`, `sqlsim-<version>-win-arm64.zip`, or `sqlsim-<version>-linux-x64.tar.gz` (Ubuntu) |
+| The Python command-line tool, Windows or Ubuntu | `sqlpysim-<version>-src.zip` |
 
-These links always download the newest release. Every release also carries the
-same files with the version in the name; see
-[Releases](https://github.com/microsoft/sqlsimtools/releases) for those and for
-older versions.
+`<version>` is the release number, for example `1.0.0`. Older versions are on
+the [Releases](https://github.com/microsoft/sqlsimtools/releases) page.
 
 > [!TIP]
 > **On Windows, unblock the ZIP before you extract it.** Windows marks
@@ -77,7 +75,7 @@ older versions.
 > signed, so a blocked download can trigger a SmartScreen warning for Studio and
 > stop the PowerShell examples from running. If you trust the download,
 > right-click the ZIP, choose **Properties**, select **Unblock**, and click
-> **OK**, or run `Unblock-File .\sqlsimtools-win-x64.zip` in PowerShell. See
+> **OK**, or run `Unblock-File .\sqlsimtools-<version>-win-x64.zip` in PowerShell. See
 > [INSTALL.md](INSTALL.md) if you already extracted it.
 
 **3. Run your first workload — choose one of these four paths.**
