@@ -184,6 +184,14 @@ Azure SQL Managed Instance, and SQL database in Microsoft Fabric.
   `.github/driver-versions.json`, DRIVER-COMPATIBILITY.md, and RELEASE-NOTES.md.
   The Windows test details are recorded in
   [#15](https://github.com/microsoft/sqlsimtools/issues/15).
+- **Compute sqlsim's displayed batch total in 64-bit arithmetic.** The
+  "Total batches to execute" line and the JSON `total_batches` value multiply
+  threads, iterations, and batches as `int` before widening
+  ([main.cpp](sqlsim/src/main.cpp) and
+  [workload_simulator.cpp](sqlsim/src/workload_simulator.cpp)), so the reported
+  total overflows above about 2.1 billion batches. Execution is unaffected.
+  CodeQL `cpp/integer-multiplication-cast-to-long` flagged three sites; the
+  alerts were dismissed for 1.0.0 pending this fix.
 - **Seed the replay database context from the connection.** `currentDatabase_`
   in [odbc_connection.cpp](sqlsim/src/odbc_connection.cpp) starts empty and is
   only assigned after a successful `USE`, so replay issues `USE [database]` on
