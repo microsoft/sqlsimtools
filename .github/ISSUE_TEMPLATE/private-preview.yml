@@ -19,47 +19,41 @@ body:
         repository where preview builds are shared and closes this issue.
         Invitations depend on current testing needs and are not guaranteed.
 
-  - type: dropdown
+  - type: checkboxes
     id: preview
     attributes:
       label: Preview builds you want to test
-      multiple: true
+      description: Select all preview builds you want to test.
       options:
-        - sqlsim on macOS ARM64
-        - sqlpysim on macOS ARM64
-        - sqlsim Studio on Ubuntu 24.04/26.04 LTS x64
-        - sqlsim Studio on Windows ARM64
-        - sqlsim Studio on macOS ARM64
-    validations:
-      required: true
+        - label: sqlsim on macOS ARM64
+        - label: sqlpysim on macOS ARM64
+        - label: sqlsim Studio on Ubuntu 24.04/26.04 LTS x64
+        - label: sqlsim Studio on Windows ARM64
+        - label: sqlsim Studio on macOS ARM64
 
-  - type: dropdown
+  - type: checkboxes
     id: target
     attributes:
       label: SQL targets you can test against
-      multiple: true
+      description: Select all SQL targets you can test against.
       options:
-        - SQL Server 2019
-        - SQL Server 2022
-        - SQL Server 2025
-        - Azure SQL Database
-        - Azure SQL Managed Instance
-        - SQL database in Microsoft Fabric
-    validations:
-      required: true
+        - label: SQL Server 2019
+        - label: SQL Server 2022
+        - label: SQL Server 2025
+        - label: Azure SQL Database
+        - label: Azure SQL Managed Instance
+        - label: SQL database in Microsoft Fabric
 
-  - type: dropdown
+  - type: checkboxes
     id: auth
     attributes:
       label: Authentication you can test
-      multiple: true
+      description: Select all authentication methods you can test.
       options:
-        - Windows or Kerberos integrated
-        - Microsoft Entra
-        - Access token
-        - SQL authentication
-    validations:
-      required: true
+        - label: Windows or Kerberos integrated
+        - label: Microsoft Entra
+        - label: Access token
+        - label: SQL authentication
 
   - type: textarea
     id: scenario
