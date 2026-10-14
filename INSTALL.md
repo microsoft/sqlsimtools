@@ -19,11 +19,9 @@ Replace `<version>` with the release version shown on GitHub.
 | sqlpysim | Windows or Ubuntu with Python 3.10+ | `sqlpysim-<version>-src.zip` |
 | sqlsimtools: sqlsim Studio with the complete sqlsim and sqlpysim packages | Windows x64 | `sqlsimtools-<version>-win-x64.zip` |
 
-Every release also attaches each package without the version in its name, for
-example `sqlsimtools-win-x64.zip`. Those always download the newest release from
-`https://github.com/microsoft/sqlsimtools/releases/latest/download/<name>`,
-which is what the README links use; the files are identical to the versioned
-ones.
+The newest release is always at
+<https://github.com/microsoft/sqlsimtools/releases/latest>; older versions are on
+the [Releases](https://github.com/microsoft/sqlsimtools/releases) page.
 
 sqlsim Studio on Ubuntu x64, Windows ARM64, and macOS ARM64 is a controlled
 Private Preview for invited testers. Those packages are not attached to the

@@ -1,14 +1,12 @@
 <#
 .SYNOPSIS
-    Stage the public release assets, adding a version-free copy of each.
+    Stage the five public release assets.
 
 .DESCRIPTION
-    Copies the five public packages from the downloaded workflow artifacts and
-    adds a copy of each without the version in its name, for example
-    sqlsimtools-win-x64.zip. GitHub serves those at a fixed URL,
-    https://github.com/<owner>/<repo>/releases/latest/download/<name>, so the
-    README can link straight to the newest download. The versioned files stay
-    for anyone who needs a specific release.
+    Copies the five public packages, each named with its version, from the
+    downloaded workflow artifacts. The README links to the latest release page,
+    https://github.com/<owner>/<repo>/releases/latest, so no version-free copies
+    are attached.
 
     Fails if any expected package is missing. The Private Preview Studio Linux
     archive is never staged.
@@ -32,23 +30,22 @@ $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 
 $packages = @(
-    @{ Versioned = "sqlsim-$Version-win-x64.zip"; Stable = 'sqlsim-win-x64.zip' }
-    @{ Versioned = "sqlsim-$Version-win-arm64.zip"; Stable = 'sqlsim-win-arm64.zip' }
-    @{ Versioned = "sqlsim-$Version-linux-x64.tar.gz"; Stable = 'sqlsim-linux-x64.tar.gz' }
-    @{ Versioned = "sqlpysim-$Version-src.zip"; Stable = 'sqlpysim-src.zip' }
-    @{ Versioned = "sqlsimtools-$Version-win-x64.zip"; Stable = 'sqlsimtools-win-x64.zip' }
+    "sqlsim-$Version-win-x64.zip"
+    "sqlsim-$Version-win-arm64.zip"
+    "sqlsim-$Version-linux-x64.tar.gz"
+    "sqlpysim-$Version-src.zip"
+    "sqlsimtools-$Version-win-x64.zip"
 )
 
 $missing = @()
 foreach ($package in $packages) {
-    $source = Get-ChildItem -LiteralPath $ArtifactDirectory -Recurse -File -Filter $package.Versioned |
+    $source = Get-ChildItem -LiteralPath $ArtifactDirectory -Recurse -File -Filter $package |
         Select-Object -First 1
     if (-not $source) {
-        $missing += $package.Versioned
+        $missing += $package
         continue
     }
-    Copy-Item -LiteralPath $source.FullName -Destination (Join-Path $OutputDirectory $package.Versioned) -Force
-    Copy-Item -LiteralPath $source.FullName -Destination (Join-Path $OutputDirectory $package.Stable) -Force
+    Copy-Item -LiteralPath $source.FullName -Destination (Join-Path $OutputDirectory $package) -Force
 }
 if ($missing) {
     throw "Release assets missing from the workflow artifacts: $($missing -join ', ')"
