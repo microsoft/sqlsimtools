@@ -41,3 +41,8 @@ does not count the automatic source-code archives.
 .\scripts\get-project-stats.ps1
 .\scripts\get-project-stats.ps1 -Json | ConvertFrom-Json
 ```
+
+In VS Code chat, ask for project stats or type `/sqlsimtools-project-stats`.
+The [`sqlsimtools-project-stats`](../.github/skills/sqlsimtools-project-stats/SKILL.md)
+skill runs this script and summarizes the results, including changes since
+numbers you provide.
