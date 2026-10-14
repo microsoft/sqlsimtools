@@ -120,7 +120,7 @@ Runs smoke-test.ps1 first, then extended tests.
 .\full-test-suite.ps1 -Server "myserver.database.windows.net" -Database "mydb" -UseToken $token
 
 # Azure SQL MI with extended login timeout for high concurrency tests
-.\full-test-suite.ps1 -Server "myinstance.public.xxx.database.windows.net,3342" -Database "tempdb" -Username "user" -Password "pass" -LoginTimeout 60
+.\full-test-suite.ps1 -Server "myinstance.public.xxx.database.windows.net,3342" -Database "tempdb" -Username "user" -Password $password -LoginTimeout 60
 ```
 
 Key parameters:
