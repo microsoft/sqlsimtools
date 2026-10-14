@@ -4,7 +4,6 @@
 #include <sstream>
 #include <vector>
 #include <climits>
-#include <mutex>
 #include <regex>
 #include "workload_simulator.h"
 #include "odbc_connection.h"
@@ -65,59 +64,6 @@ std::string buildMaskedCommandLine(int argc, char* argv[]) {
     return commandLine;
 }
 
-// SECURITY FIX (H-4): Thread-safe logger to prevent race conditions in output redirection
-class ThreadSafeLogger {
-private:
-    std::ofstream file_;
-    std::mutex mutex_;
-    bool useFile_;
-    
-public:
-    ThreadSafeLogger() : useFile_(false) {}
-    
-    bool open(const std::string& filename) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        file_.open(filename);
-        if (!file_.is_open()) {
-            return false;
-        }
-        useFile_ = true;
-        return true;
-    }
-    
-    void close() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (file_.is_open()) {
-            file_.close();
-        }
-        useFile_ = false;
-    }
-    
-    template<typename T>
-    ThreadSafeLogger& operator<<(const T& value) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (useFile_ && file_.is_open()) {
-            file_ << value;
-        } else {
-            std::cout << value;
-        }
-        return *this;
-    }
-    
-    // Handle std::endl and other manipulators
-    ThreadSafeLogger& operator<<(std::ostream& (*manip)(std::ostream&)) {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (useFile_ && file_.is_open()) {
-            manip(file_);
-            file_.flush();
-        } else {
-            manip(std::cout);
-            std::cout.flush();
-        }
-        return *this;
-    }
-};
-
 // Parse batches from a string, splitting on GO separators
 std::vector<std::string> parseBatches(const std::string& input) {
     std::vector<std::string> batches;
@@ -168,7 +114,7 @@ std::vector<std::string> parseBatches(const std::string& input) {
 }
 
 void printUsage() {
-    std::cout << "\nSQL Workload Simulator v" << SQLSIM_VERSION << " - Generic SQL query execution tool\n"
+    ConsoleMessage(std::cout) << "\nSQL Workload Simulator v" << SQLSIM_VERSION << " - Generic SQL query execution tool\n"
               << "\nUsage: sqlsim [options]\n"
               << "Note: Spaces after parameters are optional (e.g., '-S server' or '-Sserver')\n\n"
               << "Connection Options (one method required):\n\n"
@@ -275,7 +221,7 @@ int main(int argc, char* argv[]) {
     }
     
     if (result.showVersionOnly) {
-        std::cout << "sqlsim " << SQLSIM_VERSION << std::endl;
+        ConsoleMessage(std::cout) << "sqlsim " << SQLSIM_VERSION << std::endl;
         return 0;
     }
     
@@ -313,14 +259,11 @@ int main(int argc, char* argv[]) {
     }
     
     // SECURITY FIX (H-4): Output redirection with thread safety considerations
-    // Note: Stream redirection is inherently not fully thread-safe for concurrent writes.
-    // For production use, consider refactoring to use a thread-safe logging mechanism.
-    // The current implementation works because most output happens in sequential phases,
-    // and metrics collection uses its own synchronization.
+    // Every console write goes through ConsoleOutput, which serializes std::cout
+    // and std::cerr with one lock, so redirecting both to the same file is safe.
     std::ofstream outputFileStream;
     std::streambuf* coutBackup = nullptr;
     std::streambuf* cerrBackup = nullptr;
-    std::mutex outputMutex; // Added for documentation of thread safety considerations
     bool usingOutputFile = !config.outputFile.empty()
         && !(config.streamJsonOutput && config.finalJsonOutput);
     
@@ -346,18 +289,14 @@ int main(int argc, char* argv[]) {
         cerrBackup = std::cerr.rdbuf();
         std::cout.rdbuf(outputFileStream.rdbuf());
         std::cerr.rdbuf(outputFileStream.rdbuf());
-        
-        // Note: While stream redirection is set up here, true thread-safety would require
-        // wrapping all std::cout/std::cerr usage with mutexes throughout the codebase.
-        // Current risk is mitigated by the fact that most concurrent output is already
-        // synchronized (connection messages use buffering, metrics use internal mutexes).
     }
     
     auto printJsonHeader = [&config]() {
-        std::cout << "{\n";
-        std::cout << JsonOutput::jsonPair("version", std::string(SQLSIM_VERSION));
-        std::cout << JsonOutput::jsonPair("start_time", JsonOutput::getIsoTimestamp());
-        std::cout << "  \"configuration\": {\n";
+        std::ostringstream out;
+        out << "{\n";
+        out << JsonOutput::jsonPair("version", std::string(SQLSIM_VERSION));
+        out << JsonOutput::jsonPair("start_time", JsonOutput::getIsoTimestamp());
+        out << "  \"configuration\": {\n";
         
         // Build configuration fields as vector to handle last item properly
         std::vector<std::string> configFields;
@@ -536,12 +475,13 @@ int main(int argc, char* argv[]) {
             // Remove trailing comma and add it back if not last
             if (field.back() == '\n') field.pop_back();
             if (field.back() == ',') field.pop_back();
-            std::cout << field;
-            if (!isLast) std::cout << ",";
-            std::cout << "\n";
+            out << field;
+            if (!isLast) out << ",";
+            out << "\n";
         }
         
-        std::cout << "  },\n";
+        out << "  },\n";
+        ConsoleOutput::write(std::cout, out.str());
     };
 
     // Output configuration based on mode
@@ -734,7 +674,7 @@ int main(int argc, char* argv[]) {
             std::streambuf* streamBackup = std::cout.rdbuf(finalJsonStream.rdbuf());
             printJsonHeader();
             simulator.printJsonResult();
-            std::cout.flush();
+            ConsoleOutput::flush();
             std::cout.rdbuf(streamBackup);
             finalJsonStream.close();
             if (!finalJsonStream) {

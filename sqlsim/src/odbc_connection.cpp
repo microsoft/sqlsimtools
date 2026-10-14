@@ -75,10 +75,11 @@ static std::basic_string<SQLWCHAR> utf8ToSqlwchar(const std::string& utf8) {
 // #define DEBUG_ODBC
 
 #ifdef DEBUG_ODBC
+#include "console_output.h"
 #define DEBUG_LOG(msg) do { \
     std::ostringstream oss; \
-    oss << "[DEBUG ODBC Thread " << std::this_thread::get_id() << "] " << msg << std::endl; \
-    std::cout << oss.str(); \
+    oss << "[DEBUG ODBC Thread " << std::this_thread::get_id() << "] " << msg << '\n'; \
+    ConsoleOutput::write(std::cout, oss.str(), true); \
 } while(0)
 #else
 #define DEBUG_LOG(msg) do {} while(0)

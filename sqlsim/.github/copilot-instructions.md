@@ -261,6 +261,7 @@ If Copilot skips this step, stop it immediately and ask: "What does your copilot
 - Use cmake/msbuild directly (always use build.ps1)
 - Skip running full-test-suite.ps1 after code changes
 - Say "done" or "ready to publish" without verifying the dependency table above
+- Write to `std::cout` or `std::cerr` directly, or change their formatting state. Use `TS_OUT` / `TS_ERR` for timestamped lines, `ConsoleMessage(std::cout)` for untimestamped messages, or build multi-line output in a local `std::ostringstream` and pass it to `ConsoleOutput::write` (`include/console_output.h`). Put `std::fixed` / `std::setprecision` in the same statement as the value they format.
 
 ## Useful Grep Patterns
 
@@ -269,7 +270,7 @@ If Copilot skips this step, stop it immediately and ask: "What does your copilot
 Get-ChildItem -Recurse -Include *.cpp,*.h,*.ps1,*.md | Select-String "pattern"
 
 # Find output format strings
-Get-ChildItem -Recurse -Include *.cpp | Select-String "TS_OUT|std::cout"
+Get-ChildItem -Recurse -Include *.cpp | Select-String "TS_OUT|ConsoleMessage|ConsoleOutput::write"
 
 # Find test expectations
 Get-ChildItem -Include *.ps1 | Select-String "ExpectedOutput"

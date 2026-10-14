@@ -173,10 +173,6 @@ private:
     // Mutex for thread-safe stderr output and buffered errors
     std::mutex stderrMutex_;
     std::vector<std::string> bufferedErrors_;
-
-    // Serializes result-set writes to stdout. Separate from stderrMutex_ so
-    // error reporting never contends with the result path.
-    std::mutex resultOutputMutex_;
     
     // Querystats snapshot timer
     std::thread snapshotThread_;

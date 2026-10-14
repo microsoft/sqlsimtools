@@ -351,13 +351,11 @@ void MetricsCollector::printRuntime() const {
     auto connStats = getConnectionStats();
     auto execStats = getExecutionStats();
     if (connStats.count > 0) {
-        std::cout << std::fixed << std::setprecision(2);
-        TS_OUT << "Avg Connect Time: " << connStats.avgMicroseconds / 1000.0 << " ms"
+        TS_OUT << "Avg Connect Time: " << std::fixed << std::setprecision(2) << connStats.avgMicroseconds / 1000.0 << " ms"
                   << " (" << connStats.successCount << " successful, " << connStats.failureCount << " failed)\n";
     }
     if (execStats.count > 0) {
-        std::cout << std::fixed << std::setprecision(2);
-        TS_OUT << "Avg Elapsed: " << execStats.avgMicroseconds / 1000.0 << " ms"
+        TS_OUT << "Avg Elapsed: " << std::fixed << std::setprecision(2) << execStats.avgMicroseconds / 1000.0 << " ms"
                   << " (" << execStats.successCount << " successful, " << execStats.failureCount << " failed)\n";
     }
     TS_OUT << '\n';
@@ -386,7 +384,7 @@ void MetricsCollector::printRuntime() const {
         TS_OUT << "Total Warnings: " << warningCount << '\n';
     }
     
-    std::cout << std::flush;
+    ConsoleOutput::flush();
 }
 
 void MetricsCollector::printSummary() const {
@@ -399,28 +397,29 @@ void MetricsCollector::printSummary() const {
     TS_OUT << std::string(70, '=') << '\n';
     TS_OUT << "Performance Metric Summary\n";
     TS_OUT << std::string(70, '=') << '\n';
-    TS_OUT << "Total Runtime: " << elapsed.count() / 1000.0 << " seconds\n";
+    TS_OUT << "Total Runtime: " << std::fixed << std::setprecision(3) << elapsed.count() / 1000.0 << " seconds\n";
     TS_OUT << "Start Time: " << startTimeIso_ << '\n';
     TS_OUT << "End Time:   " << JsonOutput::getIsoTimestamp() << '\n';
     TS_OUT << "\n";
     
-    auto printStats = [](const std::string& name, const Statistics& stats, const std::string& timeLabel = "Latency") {
+    auto printStats = [](const std::string& name, const Statistics& stats, int percentPrecision,
+                         const std::string& timeLabel = "Latency") {
         TS_OUT << name << ":\n";
         TS_OUT << "Total Operations: " << stats.count << '\n';
         TS_OUT << "Successful: " << stats.successCount 
-                  << " (" << (stats.count > 0 ? (100.0 * stats.successCount / stats.count) : 0) << "%)\n";
+                  << " (" << std::fixed << std::setprecision(percentPrecision)
+                  << (stats.count > 0 ? (100.0 * stats.successCount / stats.count) : 0.0) << "%)\n";
         TS_OUT << "Failed: " << stats.failureCount << '\n';
         
         if (stats.count > 0) {
-            std::cout << std::fixed << std::setprecision(2);
-            TS_OUT << "Avg " << timeLabel << ": " << stats.avgMicroseconds / 1000.0 << " ms\n";
+            TS_OUT << "Avg " << timeLabel << ": " << std::fixed << std::setprecision(2) << stats.avgMicroseconds / 1000.0 << " ms\n";
         }
         TS_OUT << '\n';
     };
     
-    printStats("Connection Operations", getConnectionStats(), "Connect Time");
-    printStats("Query Execution Operations", getExecutionStats(), "Elapsed");
-    printStats("Fetch Operations", getFetchStats());
+    printStats("Connection Operations", getConnectionStats(), 0, "Connect Time");
+    printStats("Query Execution Operations", getExecutionStats(), 2, "Elapsed");
+    printStats("Fetch Operations", getFetchStats(), 2);
     
     // Phase 3 Optimization: Use relaxed memory ordering for final reads
     TS_OUT << "Total Errors: " << totalErrors_.load(std::memory_order_relaxed) << '\n';
@@ -465,7 +464,7 @@ void MetricsCollector::printSummary() const {
     }
     
     TS_OUT << std::string(70, '=') << '\n';
-    std::cout << std::flush;
+    ConsoleOutput::flush();
 }
 
 void MetricsCollector::printJsonMetrics() const {
@@ -483,108 +482,110 @@ void MetricsCollector::printJsonMetrics() const {
     double totalConnTimeSec = connStats.totalMicroseconds / 1000000.0;
     double totalExecTimeSec = execStats.totalMicroseconds / 1000000.0;
     
-    std::cout << "  \"metrics\": {\n";
+    std::ostringstream out;
+    out << "  \"metrics\": {\n";
     
     // Output driver version if available (queried after connecting)
     if (!driverVersion_.empty()) {
-        std::cout << JsonOutput::jsonPair("odbc_driver_version", driverVersion_);
+        out << JsonOutput::jsonPair("odbc_driver_version", driverVersion_);
     }
     
-    std::cout << JsonOutput::jsonPair("total_runtime_seconds", totalRuntimeSec);
-    std::cout << JsonOutput::jsonPair("total_connection_time_seconds", totalConnTimeSec);
-    std::cout << JsonOutput::jsonPair("total_query_execution_time_seconds", totalExecTimeSec);
+    out << JsonOutput::jsonPair("total_runtime_seconds", totalRuntimeSec);
+    out << JsonOutput::jsonPair("total_connection_time_seconds", totalConnTimeSec);
+    out << JsonOutput::jsonPair("total_query_execution_time_seconds", totalExecTimeSec);
     
-    std::cout << JsonOutput::jsonPair("end_time", JsonOutput::getIsoTimestamp());
+    out << JsonOutput::jsonPair("end_time", JsonOutput::getIsoTimestamp());
     
     // Verbose mode: show detailed operation metrics (matches text -v output)
     if (verboseJsonEnabled_) {
         // Connection operations
-        std::cout << "    \"connection_operations\": {\n";
-        std::cout << JsonOutput::jsonPair("total", static_cast<int>(connStats.count));
-        std::cout << JsonOutput::jsonPair("successful", static_cast<int>(connStats.successCount));
-        std::cout << JsonOutput::jsonPair("failed", static_cast<int>(connStats.failureCount));
+        out << "    \"connection_operations\": {\n";
+        out << JsonOutput::jsonPair("total", static_cast<int>(connStats.count));
+        out << JsonOutput::jsonPair("successful", static_cast<int>(connStats.successCount));
+        out << JsonOutput::jsonPair("failed", static_cast<int>(connStats.failureCount));
         if (connStats.count > 0) {
-            std::cout << JsonOutput::jsonPair("avg_connect_time_ms", connStats.avgMicroseconds / 1000.0, true);
+            out << JsonOutput::jsonPair("avg_connect_time_ms", connStats.avgMicroseconds / 1000.0, true);
         } else {
-            std::cout << "      \"avg_connect_time_ms\": 0\n";
+            out << "      \"avg_connect_time_ms\": 0\n";
         }
-        std::cout << "    },\n";
+        out << "    },\n";
         
         // Query execution operations
-        std::cout << "    \"query_execution_operations\": {\n";
-        std::cout << JsonOutput::jsonPair("total", static_cast<int>(execStats.count));
-        std::cout << JsonOutput::jsonPair("successful", static_cast<int>(execStats.successCount));
-        std::cout << JsonOutput::jsonPair("failed", static_cast<int>(execStats.failureCount));
+        out << "    \"query_execution_operations\": {\n";
+        out << JsonOutput::jsonPair("total", static_cast<int>(execStats.count));
+        out << JsonOutput::jsonPair("successful", static_cast<int>(execStats.successCount));
+        out << JsonOutput::jsonPair("failed", static_cast<int>(execStats.failureCount));
         if (execStats.count > 0) {
-            std::cout << JsonOutput::jsonPair("avg_elapsed_ms", execStats.avgMicroseconds / 1000.0, true);
+            out << JsonOutput::jsonPair("avg_elapsed_ms", execStats.avgMicroseconds / 1000.0, true);
         } else {
-            std::cout << "      \"avg_elapsed_ms\": 0\n";
+            out << "      \"avg_elapsed_ms\": 0\n";
         }
-        std::cout << "    },\n";
+        out << "    },\n";
         
         // Fetch operations
-        std::cout << "    \"fetch_operations\": {\n";
-        std::cout << JsonOutput::jsonPair("total", static_cast<int>(fetchStats.count));
-        std::cout << JsonOutput::jsonPair("successful", static_cast<int>(fetchStats.successCount));
-        std::cout << JsonOutput::jsonPair("failed", static_cast<int>(fetchStats.failureCount), true);
-        std::cout << "    },\n";
+        out << "    \"fetch_operations\": {\n";
+        out << JsonOutput::jsonPair("total", static_cast<int>(fetchStats.count));
+        out << JsonOutput::jsonPair("successful", static_cast<int>(fetchStats.successCount));
+        out << JsonOutput::jsonPair("failed", static_cast<int>(fetchStats.failureCount), true);
+        out << "    },\n";
     }
     
     // Errors block with total count and list of structured error entries
     auto errors = getRecentErrors(10);
-    std::cout << "    \"errors\": {\n";
-    std::cout << "      \"total\": " << totalErrors_.load(std::memory_order_relaxed) << ",\n";
-    std::cout << "      \"list\": [";
+    out << "    \"errors\": {\n";
+    out << "      \"total\": " << totalErrors_.load(std::memory_order_relaxed) << ",\n";
+    out << "      \"list\": [";
     if (!errors.empty()) {
-        std::cout << "\n";
+        out << "\n";
         for (size_t i = 0; i < errors.size(); ++i) {
             const auto& err = errors[i];
-            std::cout << "        {\n";
-            std::cout << "          \"type\": \"" << JsonOutput::escapeJson(err.type) << "\",\n";
-            std::cout << "          \"timestamp\": \"" << JsonOutput::escapeJson(err.timestamp) << "\",\n";
+            out << "        {\n";
+            out << "          \"type\": \"" << JsonOutput::escapeJson(err.type) << "\",\n";
+            out << "          \"timestamp\": \"" << JsonOutput::escapeJson(err.timestamp) << "\",\n";
             if (!err.query.empty()) {
-                std::cout << "          \"query\": \"" << JsonOutput::escapeJson(err.query) << "\",\n";
+                out << "          \"query\": \"" << JsonOutput::escapeJson(err.query) << "\",\n";
             }
-            std::cout << "          \"message\": \"" << JsonOutput::escapeJson(err.message) << "\"\n";
-            std::cout << "        }";
-            if (i < errors.size() - 1) std::cout << ",";
-            std::cout << "\n";
+            out << "          \"message\": \"" << JsonOutput::escapeJson(err.message) << "\"\n";
+            out << "        }";
+            if (i < errors.size() - 1) out << ",";
+            out << "\n";
         }
-        std::cout << "      ";
+        out << "      ";
     }
-    std::cout << "]\n";
-    std::cout << "    },\n";
+    out << "]\n";
+    out << "    },\n";
     
     // Warnings block with total count and list of structured warning entries
     auto warnings = getRecentWarnings(10);
-    std::cout << "    \"warnings\": {\n";
-    std::cout << "      \"total\": " << totalWarnings_.load(std::memory_order_relaxed) << ",\n";
-    std::cout << "      \"list\": [";
+    out << "    \"warnings\": {\n";
+    out << "      \"total\": " << totalWarnings_.load(std::memory_order_relaxed) << ",\n";
+    out << "      \"list\": [";
     if (!warnings.empty()) {
-        std::cout << "\n";
+        out << "\n";
         for (size_t i = 0; i < warnings.size(); ++i) {
             const auto& warn = warnings[i];
-            std::cout << "        {\n";
-            std::cout << "          \"type\": \"" << JsonOutput::escapeJson(warn.type) << "\",\n";
-            std::cout << "          \"timestamp\": \"" << JsonOutput::escapeJson(warn.timestamp) << "\",\n";
-            std::cout << "          \"message\": \"" << JsonOutput::escapeJson(warn.message) << "\"\n";
-            std::cout << "        }";
-            if (i < warnings.size() - 1) std::cout << ",";
-            std::cout << "\n";
+            out << "        {\n";
+            out << "          \"type\": \"" << JsonOutput::escapeJson(warn.type) << "\",\n";
+            out << "          \"timestamp\": \"" << JsonOutput::escapeJson(warn.timestamp) << "\",\n";
+            out << "          \"message\": \"" << JsonOutput::escapeJson(warn.message) << "\"\n";
+            out << "        }";
+            if (i < warnings.size() - 1) out << ",";
+            out << "\n";
         }
-        std::cout << "      ";
+        out << "      ";
     }
-    std::cout << "]\n";
-    std::cout << "    }\n";
+    out << "]\n";
+    out << "    }\n";
     
-    std::cout << "  },\n";
+    out << "  },\n";
     
     if (!serverEdition_.empty()) {
-        std::cout << "  \"server_edition\": \"" << JsonOutput::escapeJson(serverEdition_) << "\",\n";
+        out << "  \"server_edition\": \"" << JsonOutput::escapeJson(serverEdition_) << "\",\n";
     }
     if (!serverVersion_.empty()) {
-        std::cout << "  \"server_version\": \"" << JsonOutput::escapeJson(serverVersion_) << "\",\n";
+        out << "  \"server_version\": \"" << JsonOutput::escapeJson(serverVersion_) << "\",\n";
     }
+    ConsoleOutput::write(std::cout, out.str());
 
     // Output verbose metrics if enabled (-v -json combined)
     if (verboseJsonEnabled_) {
@@ -596,13 +597,14 @@ void MetricsCollector::printJsonMetrics() const {
         printReplaySummaryJson();
     }
     
-    std::cout << std::flush;
+    ConsoleOutput::flush();
 }
 
 void MetricsCollector::printJsonClose() const {
-    std::cout << "  \"success\": " << (totalErrors_.load() == 0 ? "true" : "false") << "\n";
-    std::cout << "}\n";
-    std::cout << std::flush;
+    std::ostringstream out;
+    out << "  \"success\": " << (totalErrors_.load() == 0 ? "true" : "false") << "\n";
+    out << "}\n";
+    ConsoleOutput::write(std::cout, out.str(), true);
 }
 
 void MetricsCollector::recordThreadConnection(int threadId, double connectTimeMs, bool success, const std::string& errorMsg) {
@@ -637,34 +639,35 @@ void MetricsCollector::recordIterationMetric(int threadId, int iteration, double
 void MetricsCollector::printVerboseJsonMetrics() const {
     std::lock_guard<std::mutex> lock(verboseMetricsMutex_);
     
+    std::ostringstream out;
     // Connection string (masked)
-    std::cout << "  \"connection_string\": \"" << JsonOutput::escapeJson(maskedConnectionString_) << "\",\n";
+    out << "  \"connection_string\": \"" << JsonOutput::escapeJson(maskedConnectionString_) << "\",\n";
     
     // Thread connections array
-    std::cout << "  \"thread_connections\": [";
+    out << "  \"thread_connections\": [";
     if (!threadConnections_.empty()) {
-        std::cout << "\n";
+        out << "\n";
         for (size_t i = 0; i < threadConnections_.size(); ++i) {
             const auto& conn = threadConnections_[i];
-            std::cout << "    {";
-            std::cout << "\"thread_id\": " << conn.threadId << ", ";
-            std::cout << "\"connect_time_ms\": " << std::fixed << std::setprecision(3) << conn.connectTimeMs << ", ";
-            std::cout << "\"status\": \"" << (conn.success ? "success" : "failed") << "\"";
+            out << "    {";
+            out << "\"thread_id\": " << conn.threadId << ", ";
+            out << "\"connect_time_ms\": " << std::fixed << std::setprecision(3) << conn.connectTimeMs << ", ";
+            out << "\"status\": \"" << (conn.success ? "success" : "failed") << "\"";
             if (!conn.success && !conn.errorMessage.empty()) {
-                std::cout << ", \"error\": \"" << JsonOutput::escapeJson(conn.errorMessage) << "\"";
+                out << ", \"error\": \"" << JsonOutput::escapeJson(conn.errorMessage) << "\"";
             }
-            std::cout << "}";
-            if (i < threadConnections_.size() - 1) std::cout << ",";
-            std::cout << "\n";
+            out << "}";
+            if (i < threadConnections_.size() - 1) out << ",";
+            out << "\n";
         }
-        std::cout << "  ";
+        out << "  ";
     }
-    std::cout << "],\n";
+    out << "],\n";
     
     // Thread iteration metrics array
-    std::cout << "  \"thread_iterations\": [";
+    out << "  \"thread_iterations\": [";
     if (!threadIterationMetrics_.empty()) {
-        std::cout << "\n";
+        out << "\n";
         
         // Sort thread IDs for consistent output
         std::vector<int> sortedThreadIds;
@@ -677,33 +680,34 @@ void MetricsCollector::printVerboseJsonMetrics() const {
             int threadId = sortedThreadIds[ti];
             const auto& threadMetrics = threadIterationMetrics_.at(threadId);
             
-            std::cout << "    {\n";
-            std::cout << "      \"thread_id\": " << threadMetrics.threadId << ",\n";
-            std::cout << "      \"iterations\": [";
+            out << "    {\n";
+            out << "      \"thread_id\": " << threadMetrics.threadId << ",\n";
+            out << "      \"iterations\": [";
             
             if (!threadMetrics.iterations.empty()) {
-                std::cout << "\n";
+                out << "\n";
                 for (size_t i = 0; i < threadMetrics.iterations.size(); ++i) {
                     const auto& iter = threadMetrics.iterations[i];
-                    std::cout << "        {";
-                    std::cout << "\"iteration\": " << iter.iteration << ", ";
-                    std::cout << "\"total_query_ms\": " << std::fixed << std::setprecision(3) << iter.totalQueryMs << ", ";
-                    std::cout << "\"queries_executed\": " << iter.queriesExecuted << ", ";
-                    std::cout << "\"queries_failed\": " << iter.queriesFailed;
-                    std::cout << "}";
-                    if (i < threadMetrics.iterations.size() - 1) std::cout << ",";
-                    std::cout << "\n";
+                    out << "        {";
+                    out << "\"iteration\": " << iter.iteration << ", ";
+                    out << "\"total_query_ms\": " << std::fixed << std::setprecision(3) << iter.totalQueryMs << ", ";
+                    out << "\"queries_executed\": " << iter.queriesExecuted << ", ";
+                    out << "\"queries_failed\": " << iter.queriesFailed;
+                    out << "}";
+                    if (i < threadMetrics.iterations.size() - 1) out << ",";
+                    out << "\n";
                 }
-                std::cout << "      ";
+                out << "      ";
             }
-            std::cout << "]\n";
-            std::cout << "    }";
-            if (ti < sortedThreadIds.size() - 1) std::cout << ",";
-            std::cout << "\n";
+            out << "]\n";
+            out << "    }";
+            if (ti < sortedThreadIds.size() - 1) out << ",";
+            out << "\n";
         }
-        std::cout << "  ";
+        out << "  ";
     }
-    std::cout << "],\n";
+    out << "],\n";
+    ConsoleOutput::write(std::cout, out.str());
 }
 
 // ============================================================================
@@ -765,18 +769,20 @@ void MetricsCollector::printReplaySummaryJson() const {
     uint64_t resultAbort = replayResultAbort_.load(std::memory_order_relaxed);
     uint64_t resultTotal = resultOk + resultError + resultAbort;
     
-    std::cout << "  \"replay_summary\": {\n";
-    std::cout << "    \"original\": {\n";
-    std::cout << "      \"events\": " << origTotal << ",\n";
-    std::cout << "      \"ok\": " << origOk << ",\n";
-    std::cout << "      \"error\": " << origError << ",\n";
-    std::cout << "      \"abort\": " << origAbort << "\n";
-    std::cout << "    },\n";
-    std::cout << "    \"result\": {\n";
-    std::cout << "      \"events\": " << resultTotal << ",\n";
-    std::cout << "      \"ok\": " << resultOk << ",\n";
-    std::cout << "      \"error\": " << resultError << ",\n";
-    std::cout << "      \"abort\": " << resultAbort << "\n";
-    std::cout << "    }\n";
-    std::cout << "  },\n";
+    std::ostringstream out;
+    out << "  \"replay_summary\": {\n";
+    out << "    \"original\": {\n";
+    out << "      \"events\": " << origTotal << ",\n";
+    out << "      \"ok\": " << origOk << ",\n";
+    out << "      \"error\": " << origError << ",\n";
+    out << "      \"abort\": " << origAbort << "\n";
+    out << "    },\n";
+    out << "    \"result\": {\n";
+    out << "      \"events\": " << resultTotal << ",\n";
+    out << "      \"ok\": " << resultOk << ",\n";
+    out << "      \"error\": " << resultError << ",\n";
+    out << "      \"abort\": " << resultAbort << "\n";
+    out << "    }\n";
+    out << "  },\n";
+    ConsoleOutput::write(std::cout, out.str());
 }

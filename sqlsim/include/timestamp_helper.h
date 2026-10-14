@@ -5,6 +5,7 @@
 #include <iomanip>
 #include <sstream>
 #include <iostream>
+#include "console_output.h"
 
 /**
  * Timestamp utility for adding timestamps to output
@@ -62,18 +63,24 @@ public:
     }
 };
 
-// Helper macro to print with timestamp
-#define TS_OUT std::cout << TimestampHelper::getCurrentTimestamp()
-#define TS_ERR std::cerr << TimestampHelper::getCurrentTimestamp()
+// Timestamped console messages. Each statement builds its text in a private
+// stream and writes it in one locked operation, so output from concurrent
+// threads never interleaves and formatting never leaks between statements.
+#define TS_OUT ConsoleMessage(std::cout) << TimestampHelper::getCurrentTimestamp()
+#define TS_ERR ConsoleMessage(std::cerr) << TimestampHelper::getCurrentTimestamp()
 
 // Helper function to print multi-line error messages with timestamps on each line
 inline void printMultiLineError(const std::string& message) {
+    const std::string timestamp = TimestampHelper::getCurrentTimestamp();
     std::istringstream stream(message);
     std::string line;
+    std::string text;
     while (std::getline(stream, line)) {
         if (!line.empty()) {
-            TS_ERR << line << std::endl;
+            text += timestamp;
+            text += line;
+            text += '\n';
         }
     }
-    std::cerr << std::flush;  // Ensure errors are flushed immediately
+    ConsoleOutput::write(std::cerr, text, true);
 }

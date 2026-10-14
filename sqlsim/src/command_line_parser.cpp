@@ -1,4 +1,5 @@
 #include "command_line_parser.h"
+#include "console_output.h"
 #include "platform_capabilities.h"
 #include "workload_config.h"
 #include <iostream>
@@ -848,7 +849,7 @@ ParseResult CommandLineParser::parse(int argc, char* argv[], WorkloadConfig& con
             } else {
                 sqlPassword = value;
                 // SECURITY: Warn about password visibility (output to stderr)
-                std::cerr << "WARNING: Password provided via command line is visible in process list and history." << std::endl;
+                ConsoleMessage(std::cerr) << "WARNING: Password provided via command line is visible in process list and history." << std::endl;
             }
         }
         else if (arg == "-l" || (arg.length() > 2 && arg.substr(0, 2) == "-l")) {

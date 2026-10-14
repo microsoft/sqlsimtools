@@ -201,6 +201,7 @@ metrics --> output[text / JSON / NDJSON]
 - **metrics_collector** - Thread-safe timing, errors, warnings, percentiles, replay summaries, and final/streaming output data
 - **query_stats** - Per-query aggregation from SQL Server statistics messages and execution plans
 - **xel_replay** - Converted XEvent trace parsing and replay event modeling
+- **console_output** - Serialized console writes: each message is built in a private stream and written to stdout or stderr in one locked operation, so concurrent output never interleaves
 
 ### Platform Architecture
 

@@ -297,8 +297,7 @@ bool WorkloadSimulator::run() {
     }
     
     // Flush stderr to ensure errors appear before summary
-    std::cerr << std::flush;
-    std::cout << std::flush;
+    ConsoleOutput::flush();
     
     if (config_.streamJsonOutput) {
         metrics_.consolidateThreadMetrics();
@@ -346,7 +345,7 @@ bool WorkloadSimulator::run() {
             metrics_.printReplaySummary();
         }
     }
-    std::cout << std::flush; // Single flush at end
+    ConsoleOutput::flush(); // Single flush at end
     
     // Determine success: return failure (exit code 1) if ANY errors occurred
     // This ensures scripts can detect SQL errors via exit code
@@ -371,15 +370,14 @@ void WorkloadSimulator::printJsonResult() const {
         printJsonQueryStats();
     }
 
+    std::ostringstream out;
     if (hasFirstExecution_.load(std::memory_order_acquire)) {
         int64_t firstNs = firstExecutionNs_.load(std::memory_order_acquire);
         int64_t lastNs = lastExecutionNs_.load(std::memory_order_acquire);
         double execElapsedSec = (lastNs - firstNs) / 1e9;
-        std::cout << std::fixed << std::setprecision(3);
-        std::cout << JsonOutput::jsonPair("execution_elapsed_seconds", execElapsedSec);
+        out << JsonOutput::jsonPair("execution_elapsed_seconds", execElapsedSec);
         if (config_.queryStats && peakThroughput_ > 0.0) {
-            std::cout << std::fixed << std::setprecision(1);
-            std::cout << JsonOutput::jsonPair("peak_throughput", peakThroughput_);
+            out << "  \"peak_throughput\": " << std::fixed << std::setprecision(1) << peakThroughput_ << ",\n";
         }
     }
 
@@ -392,15 +390,16 @@ void WorkloadSimulator::printJsonResult() const {
                 if (timeMs < minVal) minVal = timeMs;
                 if (timeMs > maxVal) maxVal = timeMs;
             }
-            std::cout << std::fixed << std::setprecision(3);
-            std::cout << "  \"connection_stats\": {\n";
-            std::cout << "    \"avg_ms\": " << (sum / connTimesMs_.size()) << ",\n";
-            std::cout << "    \"min_ms\": " << minVal << ",\n";
-            std::cout << "    \"max_ms\": " << maxVal << ",\n";
-            std::cout << "    \"count\": " << connTimesMs_.size() << "\n";
-            std::cout << "  },\n";
+            out << std::fixed << std::setprecision(3);
+            out << "  \"connection_stats\": {\n";
+            out << "    \"avg_ms\": " << (sum / connTimesMs_.size()) << ",\n";
+            out << "    \"min_ms\": " << minVal << ",\n";
+            out << "    \"max_ms\": " << maxVal << ",\n";
+            out << "    \"count\": " << connTimesMs_.size() << "\n";
+            out << "  },\n";
         }
     }
+    ConsoleOutput::write(std::cout, out.str());
 
     metrics_.printJsonMetrics();
     metrics_.printJsonClose();
@@ -791,9 +790,7 @@ void WorkloadSimulator::workerThread(int threadId) {
                     std::ostringstream displayBuffer;
                     auto flushDisplay = [&]() {
                         if (displayBuffer.tellp() > 0) {
-                            const std::string text = TimestampHelper::prefixLines(displayBuffer.str());
-                            std::lock_guard<std::mutex> outLock(resultOutputMutex_);
-                            std::cout << text << std::flush;
+                            ConsoleOutput::write(std::cout, TimestampHelper::prefixLines(displayBuffer.str()), true);
                         }
                     };
                     
@@ -1724,8 +1721,8 @@ void WorkloadSimulator::writeStreamJsonEvent(const std::string& type, bool succe
             event << ",\"status\":\"" << (success ? "success" : "error") << "\"";
         }
     }
-    event << '}';
-    std::cout << event.str() << std::endl;
+    event << "}\n";
+    ConsoleOutput::write(std::cout, event.str(), true);
 }
 
 void WorkloadSimulator::recordExecutionTimestamp() {
@@ -2079,13 +2076,13 @@ void WorkloadSimulator::printTextQueryStats() const {
         }
         TS_OUT << "  Executions: " << a.executions << '\n';
         if (!a.spids.empty()) {
-            TS_OUT << "  SPIDs: ";
+            std::ostringstream spidList;
             size_t spidIndex = 0;
             for (const auto spid : a.spids) {
-                if (spidIndex++ > 0) TS_OUT << ", ";
-                TS_OUT << spid;
+                if (spidIndex++ > 0) spidList << ", ";
+                spidList << spid;
             }
-            TS_OUT << '\n';
+            TS_OUT << "  SPIDs: " << spidList.str() << '\n';
         }
         TS_OUT << '\n';
     }
@@ -2114,85 +2111,87 @@ void WorkloadSimulator::printJsonQueryStats() const {
     
     if (aggregates.empty()) return;
     
-    std::cout << "  \"query_stats\": {\n";
-    std::cout << "    \"queries\": [\n";
+    std::ostringstream out;
+    out << "  \"query_stats\": {\n";
+    out << "    \"queries\": [\n";
     
     for (size_t i = 0; i < aggregates.size(); ++i) {
         const auto& a = aggregates[i];
-        std::cout << "      {\n";
-        std::cout << "        \"query\": \"" << JsonOutput::escapeJson(a.query) << "\",\n";
-        std::cout << "        \"spids\": [";
+        out << "      {\n";
+        out << "        \"query\": \"" << JsonOutput::escapeJson(a.query) << "\",\n";
+        out << "        \"spids\": [";
         size_t spidIndex = 0;
         for (const auto spid : a.spids) {
             if (spidIndex >= 10) break;
-            if (spidIndex++ > 0) std::cout << ", ";
-            std::cout << spid;
+            if (spidIndex++ > 0) out << ", ";
+            out << spid;
         }
-        std::cout << "],\n";
-        std::cout << "        \"spid_count\": " << a.spids.size() << ",\n";
+        out << "],\n";
+        out << "        \"spid_count\": " << a.spids.size() << ",\n";
         
-        std::cout << std::fixed << std::setprecision(3);
-        std::cout << "        \"total_elapsed_ms\": {\"avg\": " << a.totalElapsedAvg 
+        out << std::fixed << std::setprecision(3);
+        out << "        \"total_elapsed_ms\": {\"avg\": " << a.totalElapsedAvg 
                   << ", \"min\": " << a.totalElapsedMin 
                   << ", \"max\": " << a.totalElapsedMax << "},\n";
-        std::cout << "        \"server_elapsed_ms\": {\"avg\": " << a.serverElapsedLastAvg 
+        out << "        \"server_elapsed_ms\": {\"avg\": " << a.serverElapsedLastAvg 
                   << ", \"min\": " << a.serverElapsedLastMin 
                   << ", \"max\": " << a.serverElapsedLastMax << "},\n";
-        std::cout << "        \"server_cpu_ms\": {\"avg\": " << a.serverCpuLastAvg 
+        out << "        \"server_cpu_ms\": {\"avg\": " << a.serverCpuLastAvg 
                   << ", \"min\": " << a.serverCpuLastMin 
                   << ", \"max\": " << a.serverCpuLastMax << "},\n";
-        std::cout << "        \"server_elapsed_sum_ms\": {\"avg\": " << a.serverElapsedAvg 
+        out << "        \"server_elapsed_sum_ms\": {\"avg\": " << a.serverElapsedAvg 
                   << ", \"min\": " << a.serverElapsedMin 
                   << ", \"max\": " << a.serverElapsedMax << "},\n";
-        std::cout << "        \"server_cpu_sum_ms\": {\"avg\": " << a.serverCpuAvg 
+        out << "        \"server_cpu_sum_ms\": {\"avg\": " << a.serverCpuAvg 
                   << ", \"min\": " << a.serverCpuMin 
                   << ", \"max\": " << a.serverCpuMax << "},\n";
-        std::cout << "        \"compile_elapsed_ms\": {\"avg\": " << a.compileElapsedAvg 
+        out << "        \"compile_elapsed_ms\": {\"avg\": " << a.compileElapsedAvg 
                   << ", \"min\": " << a.compileElapsedMin 
                   << ", \"max\": " << a.compileElapsedMax << "},\n";
-        std::cout << "        \"logical_reads\": {\"avg\": " << std::setprecision(1) << a.logicalReadsAvg 
+        out << "        \"logical_reads\": {\"avg\": " << std::setprecision(1) << a.logicalReadsAvg 
                   << ", \"min\": " << a.logicalReadsMin 
                   << ", \"max\": " << a.logicalReadsMax << "},\n";
-        std::cout << "        \"physical_reads\": {\"avg\": " << a.physicalReadsAvg 
+        out << "        \"physical_reads\": {\"avg\": " << a.physicalReadsAvg 
                   << ", \"min\": " << a.physicalReadsMin 
                   << ", \"max\": " << a.physicalReadsMax << "},\n";
-        std::cout << "        \"read_ahead_reads\": {\"avg\": " << a.readAheadReadsAvg 
+        out << "        \"read_ahead_reads\": {\"avg\": " << a.readAheadReadsAvg 
                   << ", \"min\": " << a.readAheadReadsMin 
                   << ", \"max\": " << a.readAheadReadsMax << "},\n";
         if (a.hasRowCount) {
-            std::cout << "        \"row_count\": {\"avg\": " << a.rowCountAvg 
+            out << "        \"row_count\": {\"avg\": " << a.rowCountAvg 
                       << ", \"min\": " << a.rowCountMin 
                       << ", \"max\": " << a.rowCountMax << "},\n";
         }
 
-        std::cout << "        \"executions\": " << a.executions << ",\n";
-        std::cout << "        \"failures\": " << a.failures << "\n";
-        std::cout << "      }";
-        if (i < aggregates.size() - 1) std::cout << ",";
-        std::cout << "\n";
+        out << "        \"executions\": " << a.executions << ",\n";
+        out << "        \"failures\": " << a.failures << "\n";
+        out << "      }";
+        if (i < aggregates.size() - 1) out << ",";
+        out << "\n";
     }
     
-    std::cout << "    ],\n";
+    out << "    ],\n";
     
     // Totals
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << "    \"totals\": {\n";
-    std::cout << "      \"total_elapsed_ms\": " << totals.totalTotalElapsedMs << ",\n";
-    std::cout << "      \"server_elapsed_ms\": " << totals.totalServerElapsedLastMs << ",\n";
-    std::cout << "      \"server_cpu_ms\": " << totals.totalServerCpuLastMs << ",\n";
-    std::cout << "      \"server_elapsed_sum_ms\": " << totals.totalServerElapsedMs << ",\n";
-    std::cout << "      \"server_cpu_sum_ms\": " << totals.totalServerCpuMs << ",\n";
-    std::cout << "      \"compile_elapsed_ms\": " << totals.totalCompileElapsedMs << ",\n";
-    std::cout << "      \"logical_reads\": " << totals.totalLogicalReads << ",\n";
-    std::cout << "      \"physical_reads\": " << totals.totalPhysicalReads << ",\n";
-    std::cout << "      \"read_ahead_reads\": " << totals.totalReadAheadReads << ",\n";
+    out << std::fixed << std::setprecision(3);
+    out << "    \"totals\": {\n";
+    out << "      \"total_elapsed_ms\": " << totals.totalTotalElapsedMs << ",\n";
+    out << "      \"server_elapsed_ms\": " << totals.totalServerElapsedLastMs << ",\n";
+    out << "      \"server_cpu_ms\": " << totals.totalServerCpuLastMs << ",\n";
+    out << "      \"server_elapsed_sum_ms\": " << totals.totalServerElapsedMs << ",\n";
+    out << "      \"server_cpu_sum_ms\": " << totals.totalServerCpuMs << ",\n";
+    out << "      \"compile_elapsed_ms\": " << totals.totalCompileElapsedMs << ",\n";
+    out << "      \"logical_reads\": " << totals.totalLogicalReads << ",\n";
+    out << "      \"physical_reads\": " << totals.totalPhysicalReads << ",\n";
+    out << "      \"read_ahead_reads\": " << totals.totalReadAheadReads << ",\n";
     if (totals.hasRowCount) {
-        std::cout << "      \"total_rows\": " << totals.totalRows << ",\n";
+        out << "      \"total_rows\": " << totals.totalRows << ",\n";
     }
-    std::cout << "      \"executions\": " << totals.totalExecutions << ",\n";
-    std::cout << "      \"failures\": " << totals.totalFailures << "\n";
-    std::cout << "    }\n";
-    std::cout << "  },\n";
+    out << "      \"executions\": " << totals.totalExecutions << ",\n";
+    out << "      \"failures\": " << totals.totalFailures << "\n";
+    out << "    }\n";
+    out << "  },\n";
+    ConsoleOutput::write(std::cout, out.str());
 }
 
 void WorkloadSimulator::printJsonReplayCapture() const {
@@ -2255,51 +2254,52 @@ void WorkloadSimulator::printJsonReplayCapture() const {
         }
     }
 
-    auto printOptionalAverage = [](const char* name, double total, uint64_t samples) {
-        std::cout << "        \"" << name << "\": ";
-        if (samples == 0) std::cout << "null";
-        else std::cout << std::fixed << std::setprecision(3) << total / static_cast<double>(samples);
-        std::cout << ",\n";
+    std::ostringstream out;
+    auto printOptionalAverage = [&out](const char* name, double total, uint64_t samples) {
+        out << "        \"" << name << "\": ";
+        if (samples == 0) out << "null";
+        else out << std::fixed << std::setprecision(3) << total / static_cast<double>(samples);
+        out << ",\n";
     };
 
-    std::cout << "  \"replay_capture\": {\n";
-    std::cout << "    \"total_events\": " << config_.replayData.totalEvents << ",\n";
-    std::cout << "    \"replayable_events\": " << config_.replayData.replayableEvents << ",\n";
-    std::cout << "    \"skipped_events\": " << config_.replayData.skippedEvents << ",\n";
-    std::cout << "    \"sessions\": " << config_.replayData.sessions.size() << ",\n";
-    std::cout << "    \"captured_spids\": [";
+    out << "  \"replay_capture\": {\n";
+    out << "    \"total_events\": " << config_.replayData.totalEvents << ",\n";
+    out << "    \"replayable_events\": " << config_.replayData.replayableEvents << ",\n";
+    out << "    \"skipped_events\": " << config_.replayData.skippedEvents << ",\n";
+    out << "    \"sessions\": " << config_.replayData.sessions.size() << ",\n";
+    out << "    \"captured_spids\": [";
     for (size_t sessionIndex = 0; sessionIndex < config_.replayData.sessions.size(); ++sessionIndex) {
-        if (sessionIndex > 0) std::cout << ", ";
-        std::cout << config_.replayData.sessions[sessionIndex].sessionId;
+        if (sessionIndex > 0) out << ", ";
+        out << config_.replayData.sessions[sessionIndex].sessionId;
     }
-    std::cout << "],\n";
-    std::cout << "    \"queries\": [";
-    if (!aggregates.empty()) std::cout << "\n";
+    out << "],\n";
+    out << "    \"queries\": [";
+    if (!aggregates.empty()) out << "\n";
 
     size_t index = 0;
     for (const auto& [query, aggregate] : aggregates) {
-        std::cout << "      {\n";
-        std::cout << "        \"query\": \"" << JsonOutput::escapeJson(query) << "\",\n";
-        std::cout << "        \"event_type\": \"" << JsonOutput::escapeJson(aggregate.eventType) << "\",\n";
-        std::cout << "        \"executions\": " << aggregate.executions << ",\n";
-        std::cout << "        \"sessions\": " << aggregate.sessions.size() << ",\n";
-        std::cout << "        \"captured_spids\": [";
+        out << "      {\n";
+        out << "        \"query\": \"" << JsonOutput::escapeJson(query) << "\",\n";
+        out << "        \"event_type\": \"" << JsonOutput::escapeJson(aggregate.eventType) << "\",\n";
+        out << "        \"executions\": " << aggregate.executions << ",\n";
+        out << "        \"sessions\": " << aggregate.sessions.size() << ",\n";
+        out << "        \"captured_spids\": [";
         constexpr size_t maxQuerySpids = 10;
         size_t sessionIndex = 0;
         for (const auto sessionId : aggregate.sessions) {
             if (sessionIndex >= maxQuerySpids) break;
-            if (sessionIndex++ > 0) std::cout << ", ";
-            std::cout << sessionId;
+            if (sessionIndex++ > 0) out << ", ";
+            out << sessionId;
         }
-        std::cout << "],\n";
-        std::cout << "        \"databases\": [";
+        out << "],\n";
+        out << "        \"databases\": [";
         size_t databaseIndex = 0;
         for (const auto& database : aggregate.databases) {
-            if (databaseIndex++ > 0) std::cout << ", ";
-            std::cout << "\"" << JsonOutput::escapeJson(database) << "\"";
+            if (databaseIndex++ > 0) out << ", ";
+            out << "\"" << JsonOutput::escapeJson(database) << "\"";
         }
-        std::cout << "],\n";
-        std::cout << "        \"outcomes\": {\"ok\": " << aggregate.ok
+        out << "],\n";
+        out << "        \"outcomes\": {\"ok\": " << aggregate.ok
                   << ", \"error\": " << aggregate.errors
                   << ", \"abort\": " << aggregate.aborts << "},\n";
         printOptionalAverage("avg_duration_ms", aggregate.durationTotalMs, aggregate.durationSamples);
@@ -2307,18 +2307,18 @@ void WorkloadSimulator::printJsonReplayCapture() const {
         printOptionalAverage("avg_logical_reads", static_cast<double>(aggregate.logicalReadsTotal), aggregate.logicalReadsSamples);
         printOptionalAverage("avg_physical_reads", static_cast<double>(aggregate.physicalReadsTotal), aggregate.physicalReadsSamples);
         printOptionalAverage("avg_writes", static_cast<double>(aggregate.writesTotal), aggregate.writesSamples);
-        std::cout << "        \"avg_row_count\": ";
-        if (aggregate.rowCountSamples == 0) std::cout << "null\n";
-        else std::cout << std::fixed << std::setprecision(3)
+        out << "        \"avg_row_count\": ";
+        if (aggregate.rowCountSamples == 0) out << "null\n";
+        else out << std::fixed << std::setprecision(3)
                        << static_cast<double>(aggregate.rowCountTotal) /
                           static_cast<double>(aggregate.rowCountSamples) << "\n";
-        std::cout << "      }";
-        if (++index < aggregates.size()) std::cout << ",";
-        std::cout << "\n";
+        out << "      }";
+        if (++index < aggregates.size()) out << ",";
+        out << "\n";
     }
-    if (!aggregates.empty()) std::cout << "    ";
-    std::cout << "],\n";
-    std::cout << "    \"connection_map\": [";
+    if (!aggregates.empty()) out << "    ";
+    out << "],\n";
+    out << "    \"connection_map\": [";
     std::vector<ReplayConnectionInfo> connections;
     {
         std::lock_guard<std::mutex> lock(replayConnectionsMutex_);
@@ -2328,20 +2328,21 @@ void WorkloadSimulator::printJsonReplayCapture() const {
               [](const ReplayConnectionInfo& left, const ReplayConnectionInfo& right) {
                   return left.worker < right.worker;
               });
-    if (!connections.empty()) std::cout << "\n";
+    if (!connections.empty()) out << "\n";
     for (size_t connectionIndex = 0; connectionIndex < connections.size(); ++connectionIndex) {
         const auto& connection = connections[connectionIndex];
-        std::cout << "      {\"worker\": " << connection.worker << ", \"captured_spid\": ";
-        if (connection.capturedSpid > 0) std::cout << connection.capturedSpid;
-        else std::cout << "null";
-        std::cout << ", \"replay_spid\": ";
-        if (connection.replaySpid > 0) std::cout << connection.replaySpid;
-        else std::cout << "null";
-        std::cout << "}";
-        if (connectionIndex + 1 < connections.size()) std::cout << ",";
-        std::cout << "\n";
+        out << "      {\"worker\": " << connection.worker << ", \"captured_spid\": ";
+        if (connection.capturedSpid > 0) out << connection.capturedSpid;
+        else out << "null";
+        out << ", \"replay_spid\": ";
+        if (connection.replaySpid > 0) out << connection.replaySpid;
+        else out << "null";
+        out << "}";
+        if (connectionIndex + 1 < connections.size()) out << ",";
+        out << "\n";
     }
-    if (!connections.empty()) std::cout << "    ";
-    std::cout << "]\n";
-    std::cout << "  },\n";
+    if (!connections.empty()) out << "    ";
+    out << "]\n";
+    out << "  },\n";
+    ConsoleOutput::write(std::cout, out.str());
 }
