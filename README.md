@@ -138,6 +138,7 @@ between the release-overlay, marketplace plugin, and portable skill paths.
 | Destination | What you will find |
 | --- | --- |
 | **[Install](INSTALL.md)** | Release package chooser, prerequisites, extraction, verification, upgrades, and older versions |
+| **[FAQ](FAQ.md)** | Support, privacy and data collection, security reporting, platform status, and how sqlsimtools compares with other tools |
 | **[Driver compatibility](DRIVER-COMPATIBILITY.md)** | Validated ODBC Driver 18 and `mssql-python` versions, and what to expect from newer releases |
 | **[Build from source](BUILDING.md)** | Supported build scripts, local release-shaped output, RC validation, and version publication |
 | **[Use with agents](USING-WITH-AGENTS.md)** | Release-embedded skills, Agent Plugins, portable `AGENTS.md`, and the Workload Builder |
