@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="title description">
+  <title id="title">sqlsim</title>
+  <desc id="description">SQL database with forward workload arrows</desc>
+  <defs>
+    <linearGradient id="database" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1268a8"/>
+      <stop offset="100%" stop-color="#0b2f5b"/>
+    </linearGradient>
+    <linearGradient id="databaseTop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#4a91c7"/>
+      <stop offset="100%" stop-color="#1268a8"/>
+    </linearGradient>
+    <linearGradient id="motion" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d9e0e6"/>
+      <stop offset="100%" stop-color="#ffffff"/>
+    </linearGradient>
+  </defs>
+  <path d="M16 26v66c0 11 21.5 20 48 20s48-9 48-20V26z" fill="url(#database)"/>
+  <ellipse cx="64" cy="26" rx="48" ry="16" fill="url(#databaseTop)"/>
+  <ellipse cx="64" cy="25" rx="39" ry="10" fill="#ffffff" opacity=".16"/>
+  <path d="M16 58c0 11 21.5 20 48 20s48-9 48-20" fill="none" stroke="#7fb1d5" stroke-width="2" opacity=".28"/>
+  <text x="64" y="62" fill="#ffffff" font-family="Consolas, 'Courier New', monospace" font-size="27" font-weight="700" text-anchor="middle">SQL</text>
+  <g fill="url(#motion)">
+    <path d="M31 83h13v-5l12 9-12 9v-5H31z" opacity=".72"/>
+    <path d="M51 83h13v-5l12 9-12 9v-5H51z" opacity=".86"/>
+    <path d="M71 83h13v-5l12 9-12 9v-5H71z"/>
+  </g>
+</svg>
