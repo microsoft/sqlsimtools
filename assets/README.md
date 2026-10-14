@@ -14,6 +14,7 @@ its tools.
 | `sqlsimstudio-blog-hero.png` | Blog and social posts |
 | `sqlsimtools-four-ways.png` | Root README; four-quadrant Studio, CLI, and GitHub Copilot overview |
 | `sqlsimtools-four-ways-blog.png` | 2.4:1 four-quadrant blog banner |
+| `sqlsimtools-social-preview.png` | 1280x640 GitHub social preview (Settings > General > Social preview); the four-quadrant banner padded to 2:1 |
 | `querystats-report.png` | sqlsim manual |
 
 ## Design Elements
