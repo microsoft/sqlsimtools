@@ -510,3 +510,5 @@ Desktop.ini
 !/sqlsimstudio/client/index.html
 # GitHub Pages landing page (hand-written, not generated).
 !/docs/index.html
+# Google Search Console ownership verification for the Pages site.
+!/docs/google8cf1ece3c072149f.html
