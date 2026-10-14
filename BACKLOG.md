@@ -173,6 +173,17 @@ Azure SQL Managed Instance, and SQL database in Microsoft Fabric.
   future revision should generate both reports directly from the Results and
   Compare views, reusing the shipped generators rather than reimplementing
   them in the browser.
+- **Adopt `mssql-python` 1.16.0 in sqlpysim.** 1.0.0 stays on 1.15.0; see
+  "sqlpysim stays on `mssql-python` 1.15.0 for now" in
+  [RELEASE-NOTES.md](RELEASE-NOTES.md). 1.16.0 passed the Windows x64 suites on
+  2026-10-13 (smoke 53/53, full 93/93, unit 21/21). Because it adds the Rust
+  runtime `mssql-python-rs`, before moving the pin: run the Ubuntu x64 and
+  Windows ARM64 suites, test Azure SQL Database with access-token and Microsoft
+  Entra authentication, confirm how 1.16.0 chooses between the Rust runtime and
+  the bundled ODBC driver, then update `requirements.txt`, `setup.py`,
+  `.github/driver-versions.json`, DRIVER-COMPATIBILITY.md, and RELEASE-NOTES.md.
+  The Windows test details are recorded in
+  [#15](https://github.com/microsoft/sqlsimtools/issues/15).
 - **Seed the replay database context from the connection.** `currentDatabase_`
   in [odbc_connection.cpp](sqlsim/src/odbc_connection.cpp) starts empty and is
   only assigned after a successful `USE`, so replay issues `USE [database]` on
