@@ -257,6 +257,16 @@ The two can differ — a host with `msodbcsql18` 18.7.1.1 installed still runs
 `sqlpysim` on the bundled 18.6.2.1. Updating the system package does not move
 `sqlpysim`; that requires a newer `mssql-python` release.
 
+### sqlpysim stays on `mssql-python` 1.15.0 for now
+
+`sqlpysim` 1.0.0 is validated with, and `requirements.txt` pins,
+`mssql-python==1.15.0`. `mssql-python` 1.16.0 is available and passed the
+Windows x64 test suites, but it adds a new Rust-based connection runtime
+(`mssql-python-rs`), so it will be adopted only after Ubuntu, Windows ARM64,
+and Azure SQL authentication testing. Until then, install from
+`requirements.txt`. Running sqlpysim on a newer `mssql-python` is supported on a
+best-effort basis; see [DRIVER-COMPATIBILITY.md](DRIVER-COMPATIBILITY.md).
+
 ### Very long, high-rate runs keep growing in memory
 
 `sqlsim` and `sqlpysim` keep one latency sample per query execution until the
