@@ -71,7 +71,7 @@ Faithful session-based replay with full ODBC fidelity, as fast as possible (no t
 
 Flatten all events into one ordered sequence and run it like a SQL script.
 
-- All events from the trace ordered by timestamp into a single sequence
+- All events from the trace ordered by timestamp into a single sequence (stable sort, so events that share a timestamp keep their `event_sequence` order)
 - `-n` concurrent threads each run the full sequence (like `-i` with a SQL file)
 - `-r` iterations per thread
 - `sp_prepare`/`sp_execute`/`sp_unprepare` lifecycle is collapsed — each event replayed as a one-shot
@@ -96,7 +96,7 @@ Flatten all events into one ordered sequence and run it like a SQL script.
 - Each unique `session_id` in the trace becomes a replay thread
 - `sp_reset_connection` events split a single `session_id` into multiple logical sessions
 - Thread count is dictated by the trace (no cap)
-- Events within each session are ordered by timestamp
+- Events within each session keep the replay file order, which `convert-xel.ps1` sorts by `event_sequence`
 
 ### Fast Mode: Connection Pooling Detection
 
@@ -106,7 +106,7 @@ Flatten all events into one ordered sequence and run it like a SQL script.
 
 ### Stress Mode: Event Flattening
 
-- All events from all sessions ordered by timestamp into a single sequence
+- All events from all sessions ordered by timestamp into a single sequence; ties keep `event_sequence` order
 - `sp_prepare`/`sp_unprepare` events are dropped (no handle context across flattened events)
 - `sp_execute` events must include the statement text so they can replay as one-shot `SQLPrepare` + bind + `SQLExecute`
 - Each of `-n` threads runs the full sequence independently
@@ -177,6 +177,7 @@ The conversion script reads `.xel` files and produces the XML file for replay:
 - **Alternate path**: Use `Microsoft.SqlServer.XEvent.Linq` .NET assembly (offline, no server needed)
 - Filters out `sp_cursor*` and `sp_reset_connection` (or marks `sp_reset_connection` as metadata)
 - Uses XQuery to extract fields from `event_data` XML
+- Orders events by the `package0.event_sequence` action, not file position: Extended Events writes memory buffers to the file in no guaranteed order. `event_sequence` restarts at 1 when the session starts, so a file whose lowest sequence is not above the previous file's lowest starts a new run, and runs stay in file name order. Without the action, events stay in file order with a warning
 - Wraps all events into a single XML file
 
 ### XEvent Capture Script
@@ -186,16 +187,16 @@ Standard XEvent session definition to capture the required events:
 ```sql
 CREATE EVENT SESSION [sqlsim_capture] ON SERVER
 ADD EVENT sqlserver.sql_batch_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
 ),
 ADD EVENT sqlserver.rpc_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
 ),
 ADD EVENT sqlserver.login(
-    ACTION(sqlserver.session_id)
+    ACTION(package0.event_sequence, sqlserver.session_id)
 ),
 ADD EVENT sqlserver.logout(
-    ACTION(sqlserver.session_id)
+    ACTION(package0.event_sequence, sqlserver.session_id)
 )
 ADD TARGET package0.event_file(
     SET filename = N'sqlsim_capture.xel',
@@ -272,7 +273,7 @@ is never silently compared against a `stress` replay.
 ### Fast Mode: Worker Thread Logic
 
 ```
-for each event in session (ordered by timestamp):
+for each event in session (in event_sequence order):
     if event is sql_batch_completed:
         SQLExecDirect(batch_text)
 
@@ -306,7 +307,7 @@ for each event in session (ordered by timestamp):
 ### Stress Mode: Worker Thread Logic
 
 ```
-// All events flattened into one sequence, ordered by timestamp
+// All events flattened into one sequence, ordered by timestamp (ties in event_sequence order)
 // sp_prepare/sp_unprepare removed; sp_execute promoted to one-shot
 
 for each event in sequence:
@@ -336,6 +337,7 @@ for each event in sequence:
 - Third replay mode: like fast but with original timing between events
 - Insert `sleep()` between events matching the original inter-event gaps within each session
 - Handle edge cases: very long gaps (cap at configurable max, e.g., 30 seconds)
+- Optionally synchronize sessions to the original timeline so cross-session ordering is reproduced; tracked in GitHub issue #39
 
 ### Per-Session Metrics
 - Report metrics grouped by session ID in addition to aggregate

@@ -10,6 +10,11 @@
     so this script simply wraps the raw event_data strings in a <replay> root element.
     No XML parsing or re-serialization is needed — just straight pass-through.
     
+    Events are written in the order they occurred. Extended Events writes memory
+    buffers to the .xel file in no guaranteed order, so file position is not event
+    order. The script sorts by the package0.event_sequence action, which the capture
+    session must include. Without it, events stay in file order and a warning is shown.
+    
     Cursor events (sp_cursor*) are filtered out via a simple string match.
 
 .PARAMETER XelFile
@@ -99,26 +104,44 @@ Write-Host "Output: $OutputFile"
 Write-Host "Server: $ServerName"
 Write-Host ""
 
-# Query to read XEL file - get raw event_data XML strings
+# Read the events once into a temp table, then order them by event_sequence.
+# event_sequence restarts at 1 whenever the capture session starts, and each start
+# writes a new file, so a file whose lowest sequence is not above the previous
+# file's lowest begins a new capture run. Runs are kept in file name order.
+$topClause = if ($MaxEvents -gt 0) { "TOP ($MaxEvents) " } else { "" }
 $query = @"
-SELECT 
-    object_name,
-    CAST(event_data AS NVARCHAR(MAX)) AS event_data
-FROM sys.fn_xe_file_target_read_file(N'$xelPathStr', NULL, NULL, NULL)
-WHERE object_name IN ('sql_batch_completed', 'rpc_completed', 'login', 'logout')
-ORDER BY file_name, file_offset
-"@
+SET NOCOUNT ON;
 
-if ($MaxEvents -gt 0) {
-    $query = @"
-SELECT TOP ($MaxEvents)
-    object_name,
-    CAST(event_data AS NVARCHAR(MAX)) AS event_data
-FROM sys.fn_xe_file_target_read_file(N'$xelPathStr', NULL, NULL, NULL)
-WHERE object_name IN ('sql_batch_completed', 'rpc_completed', 'login', 'logout')
-ORDER BY file_name, file_offset
+SELECT
+    f.file_name,
+    f.file_offset,
+    f.object_name,
+    f.event_data,
+    CAST(f.event_data AS XML).value('(event/action[@name="event_sequence"]/value)[1]', 'bigint') AS event_sequence
+INTO #events
+FROM sys.fn_xe_file_target_read_file(N'$xelPathStr', NULL, NULL, NULL) AS f
+WHERE f.object_name IN ('sql_batch_completed', 'rpc_completed', 'login', 'logout');
+
+WITH files AS (
+    SELECT file_name, MIN(event_sequence) AS min_sequence
+    FROM #events
+    GROUP BY file_name
+), file_starts AS (
+    SELECT file_name,
+           CASE WHEN min_sequence <= LAG(min_sequence) OVER (ORDER BY file_name) THEN 1 ELSE 0 END AS starts_run
+    FROM files
+), runs AS (
+    SELECT file_name, SUM(starts_run) OVER (ORDER BY file_name ROWS UNBOUNDED PRECEDING) AS run_number
+    FROM file_starts
+)
+SELECT $topClause
+    e.object_name,
+    CAST(e.event_data AS NVARCHAR(MAX)) AS event_data,
+    e.event_sequence
+FROM #events AS e
+JOIN runs AS r ON r.file_name = e.file_name
+ORDER BY r.run_number, e.event_sequence, e.file_name, e.file_offset;
 "@
-}
 
 Write-Host "Reading XEL file via sys.fn_xe_file_target_read_file()..."
 
@@ -141,6 +164,7 @@ try {
     
     $eventCount = 0
     $skippedCount = 0
+    $unsequencedCount = 0
     
     while ($reader.Read()) {
         $objectName = $reader["object_name"].ToString()
@@ -150,6 +174,9 @@ try {
         if ($objectName -eq "rpc_completed" -and $eventDataXml -match "sp_cursor") {
             $skippedCount++
             continue
+        }
+        if ($reader["event_sequence"] -is [DBNull]) {
+            $unsequencedCount++
         }
         
         # Write the raw event_data XML directly — no parsing, no re-serialization
@@ -171,6 +198,13 @@ try {
     Write-Host "  Events written: $eventCount"
     Write-Host "  Events skipped: $skippedCount (cursor events)"
     Write-Host "  Output file: $OutputFile"
+    if ($unsequencedCount -eq 0) {
+        Write-Host "  Event order: event_sequence"
+    } else {
+        Write-Warning ("$unsequencedCount of $eventCount events have no event_sequence, so they are written in file order, " +
+            "which can differ from the order they occurred. Add ACTION(package0.event_sequence) to every event " +
+            "in the capture session.")
+    }
     
     $fileSize = (Get-Item $OutputFile).Length
     if ($fileSize -gt 1MB) {

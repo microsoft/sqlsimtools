@@ -1919,17 +1919,21 @@ The replay workflow has three steps:
 Set up an XEvent session on your SQL Server to capture the workload:
 
 ```sql
--- Create XEvent session (example - adjust filters as needed)
+-- Create XEvent session (example - adjust filters, file path, and size as needed)
 CREATE EVENT SESSION [sqlsim_capture] ON SERVER
-ADD EVENT sqlpackage.sql_batch_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)),
-ADD EVENT sqlpackage.rpc_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name))
+ADD EVENT sqlserver.sql_batch_completed(
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)),
+ADD EVENT sqlserver.rpc_completed(
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name))
+ADD TARGET package0.event_file(
+    SET filename = N'C:\temp\sqlsim_capture.xel', max_file_size = 100)
 WITH (MAX_MEMORY=4096 KB, EVENT_RETENTION_MODE=ALLOW_SINGLE_EVENT_LOSS,
       MAX_DISPATCH_LATENCY=30 SECONDS, TRACK_CAUSALITY=OFF);
 
 ALTER EVENT SESSION [sqlsim_capture] ON SERVER STATE = START;
 ```
+
+Include `package0.event_sequence` on every event. Extended Events writes its memory buffers to the `.xel` file in no guaranteed order, so the position of an event in the file is not the order in which it occurred. `convert-xel.ps1` sorts events by `event_sequence`; without it, events stay in file order and the converter shows a warning. The SQL Server service account must be able to write to the `filename` folder.
 
 > **Tip:** The `replay/` directory includes helper scripts `setup-test-capture.sql` and `stop-test-capture.sql` for setting up test captures.
 
@@ -1942,13 +1946,13 @@ After capturing, stop the XEvent session and convert the `.xel` files:
 .\replay\convert-xel.ps1 -XelFile "C:\temp\sqlsim_capture*.xel" -OutputFile trace.xml
 ```
 
-The converter preserves all event data including SQL text, parameters, stored procedure names, database context, session IDs, and original outcomes (ok/error/abort).
+The converter preserves all event data including SQL text, parameters, stored procedure names, database context, session IDs, and original outcomes (ok/error/abort). It writes events in the order they occurred, using `event_sequence`. Because `event_sequence` restarts at 1 each time the capture session starts, each restart's files are kept together in file name order.
 
 ### Step 3: Replay the Trace
 
 **Fast mode** (session-ordered, as-fast-as-possible replay):
 
-Each original session gets its own thread with its own connection. Supported events replay as fast as possible in the order they occurred within each session, using the corresponding ODBC methods (prepared statements, parameterized queries, stored procedures). Captured timestamp gaps are not reproduced:
+Each original session gets its own thread with its own connection, and all sessions replay concurrently. Supported events replay as fast as possible in the order they occurred within each session, using the corresponding ODBC methods (prepared statements, parameterized queries, stored procedures). Captured timestamp gaps are not reproduced, and sessions are not synchronized with each other: every session starts immediately, so statements from different sessions can run in a different relative order than in the capture. Blocking and other contention between sessions may therefore differ from the original workload:
 
 ```powershell
 sqlsim -S localhost -E -replay fast -replayfile trace.xml

@@ -2286,11 +2286,11 @@ IF EXISTS(SELECT 1 FROM sys.server_event_sessions WHERE name = 'sqlsim_fulltest_
 GO
 CREATE EVENT SESSION sqlsim_fulltest_capture ON SERVER
 ADD EVENT sqlserver.sql_batch_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 ),
 ADD EVENT sqlserver.rpc_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 )
 ADD TARGET package0.event_file(
@@ -2511,11 +2511,11 @@ IF EXISTS(SELECT 1 FROM sys.server_event_sessions WHERE name = 'sqlsim_fulltest_
 GO
 CREATE EVENT SESSION sqlsim_fulltest_replay_capture ON SERVER
 ADD EVENT sqlserver.sql_batch_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 ),
 ADD EVENT sqlserver.rpc_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 )
 ADD TARGET package0.event_file(

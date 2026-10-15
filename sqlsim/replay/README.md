@@ -68,6 +68,14 @@ The converter reads the .xel file via `sys.fn_xe_file_target_read_file()` on the
 SQL Server. The raw `event_data` XML is passed through directly — no parsing or
 re-serialization.
 
+Events are written in the order they occurred. Extended Events writes its memory
+buffers to the .xel file in no guaranteed order, so the converter sorts by the
+`package0.event_sequence` action instead of file position. The capture scripts in this
+folder include that action; add it to every event in your own capture sessions. Without
+it, events stay in file order and the converter shows a warning. `event_sequence`
+restarts at 1 each time the capture session starts, so each restart's files are kept
+together in file name order.
+
 Options:
 - `-ServerName <server>` — SQL Server to read the .xel file (default: localhost)
 - `-MaxEvents <n>` — Limit the number of events extracted
@@ -75,8 +83,10 @@ Options:
 ### Step 3: Replay the Trace
 
 **Fast mode** — preserves captured session grouping. Each original session gets its own
-connection. Supported events replay as fast as possible in their captured order within
-each session; timestamp gaps are not reproduced:
+connection, and all sessions replay concurrently. Supported events replay as fast as
+possible in their captured order within each session. Timestamp gaps are not reproduced,
+and sessions are not synchronized with each other, so statements from different sessions
+can run in a different relative order than in the capture:
 
 ```powershell
 sqlsim -S localhost -E -replay fast -replayfile trace.xml

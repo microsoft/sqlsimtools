@@ -13,21 +13,23 @@ GO
 
 -- Create the XEvent session
 -- Only captures events from 'sqlsim' app name. Run setup/teardown with -app sqlsim_admin.
+-- package0.event_sequence lets convert-xel.ps1 restore the order events occurred;
+-- Extended Events does not write buffers to the .xel file in event order.
 CREATE EVENT SESSION sqlsim_test_capture ON SERVER
 ADD EVENT sqlserver.sql_batch_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 ),
 ADD EVENT sqlserver.rpc_completed(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 ),
 ADD EVENT sqlserver.login(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 ),
 ADD EVENT sqlserver.logout(
-    ACTION(sqlserver.session_id, sqlserver.database_name)
+    ACTION(package0.event_sequence, sqlserver.session_id, sqlserver.database_name)
     WHERE sqlserver.client_app_name = 'sqlsim'
 )
 ADD TARGET package0.event_file(

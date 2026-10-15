@@ -98,7 +98,7 @@ struct ReplayEvent {
 struct ReplaySession {
     int64_t sessionId;
     std::string databaseName;       // Initial database context
-    std::vector<ReplayEvent> events; // Events ordered by timestamp
+    std::vector<ReplayEvent> events; // Events in replay file order (event_sequence order from convert-xel.ps1)
     bool usesPooling;               // Whether sp_reset_connection was seen
     
     ReplaySession() : sessionId(0), usesPooling(false) {}

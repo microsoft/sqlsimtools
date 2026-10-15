@@ -956,7 +956,7 @@ void XelReplayParser::buildStressSequence() {
     // - Drop sp_prepare and sp_unprepare events
     // - Drop sp_reset_connection events  
     // - Keep all other events
-    // - Sort by timestamp
+    // - Sort by timestamp, keeping the converted event_sequence order for ties
     
     std::vector<ReplayEvent> stressEvents;
     stressEvents.reserve(data_.replayableEvents);
@@ -986,11 +986,12 @@ void XelReplayParser::buildStressSequence() {
         }
     }
     
-    // Sort by timestamp
-    std::sort(stressEvents.begin(), stressEvents.end(),
-              [](const ReplayEvent& a, const ReplayEvent& b) {
-                  return a.timestamp < b.timestamp;
-              });
+    // Sort by timestamp. Most events in a busy capture share a timestamp, so the
+    // sort must be stable to keep convert-xel.ps1's event_sequence order for ties.
+    std::stable_sort(stressEvents.begin(), stressEvents.end(),
+                     [](const ReplayEvent& a, const ReplayEvent& b) {
+                         return a.timestamp < b.timestamp;
+                     });
     
     data_.allEvents = std::move(stressEvents);
 }
