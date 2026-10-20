@@ -122,9 +122,9 @@ jobs:
               throw "Studio archive is missing $path"
             }
           }
-          & lipo -verify_arch arm64 (Join-Path $studio 'sqlsimstudio')
+          & lipo (Join-Path $studio 'sqlsimstudio') -verify_arch arm64
           if ($LASTEXITCODE -ne 0) { throw 'Studio is not an ARM64 executable.' }
-          & lipo -verify_arch arm64 (Join-Path $studio 'sqlsim/sqlsim')
+          & lipo (Join-Path $studio 'sqlsim/sqlsim') -verify_arch arm64
           if ($LASTEXITCODE -ne 0) { throw 'Bundled sqlsim is not an ARM64 executable.' }
           & (Join-Path $studio 'sqlsim/sqlsim') --version
           if ($LASTEXITCODE -ne 0) { throw 'Bundled sqlsim could not start.' }
