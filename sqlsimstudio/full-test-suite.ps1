@@ -580,24 +580,25 @@ try {
             return "expected 400, got $($response.Status)"
         }
 
-        function Stop-ValidationRun {
-            $stop = Invoke-StudioApi -Method 'DELETE' -Path '/api/runs/current'
-            if ($stop.Status -notin [Net.HttpStatusCode]::Accepted, [Net.HttpStatusCode]::NotFound) {
-                return "stopping the validation run returned $($stop.Status)"
-            }
-            $deadline = [DateTime]::UtcNow.AddSeconds(10)
-            do {
-                Start-Sleep -Milliseconds 100
-                $state = (Invoke-StudioApi -Method GET -Path '/api/runs/current').Json.state
-            } while ($state -notin 'completed', 'failed', 'stopped' -and [DateTime]::UtcNow -lt $deadline)
-            if ($state -notin 'completed', 'failed', 'stopped') {
-                return "the validation run did not stop: $state"
-            }
-            return $null
-        }
         if (-not $response.Json.error) { return 'rejection carried no error message' }
         if ($ExpectedError -and $response.Json.error -notmatch $ExpectedError) {
             return "expected error matching '$ExpectedError', got '$($response.Json.error)'"
+        }
+        return $null
+    }
+
+    function Stop-ValidationRun {
+        $stop = Invoke-StudioApi -Method 'DELETE' -Path '/api/runs/current'
+        if ($stop.Status -notin [Net.HttpStatusCode]::Accepted, [Net.HttpStatusCode]::NotFound) {
+            return "stopping the validation run returned $($stop.Status)"
+        }
+        $deadline = [DateTime]::UtcNow.AddSeconds(10)
+        do {
+            Start-Sleep -Milliseconds 100
+            $state = (Invoke-StudioApi -Method GET -Path '/api/runs/current').Json.state
+        } while ($state -notin 'completed', 'failed', 'stopped' -and [DateTime]::UtcNow -lt $deadline)
+        if ($state -notin 'completed', 'failed', 'stopped') {
+            return "the validation run did not stop: $state"
         }
         return $null
     }
