@@ -81,23 +81,32 @@ function Invoke-KitCheck {
     if ($pythonPath) { $start.Environment['SQLSIM_STUDIO_PYTHON_PATH'] = $pythonPath }
     $stdoutPath = Join-Path $reportRoot "$Name.stdout.log"
     $stderrPath = Join-Path $reportRoot "$Name.stderr.log"
-    $stdout = [IO.File]::Create($stdoutPath)
-    $stderr = [IO.File]::Create($stderrPath)
+    $stdout = [IO.FileStream]::new($stdoutPath, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::Read, 1)
+    $stderr = [IO.FileStream]::new($stderrPath, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::Read, 1)
     $process = $null
     try {
         $process = [Diagnostics.Process]::Start($start)
         $outTask = $process.StandardOutput.BaseStream.CopyToAsync($stdout)
         $errTask = $process.StandardError.BaseStream.CopyToAsync($stderr)
+        $timedOut = $false
+        if ($Tier -eq 'Offline') {
+            $timedOut = -not $process.WaitForExit(300000)
+            if ($timedOut -and -not $process.HasExited) { $process.Kill($true) }
+        }
         $process.WaitForExit()
         $outTask.GetAwaiter().GetResult()
         $errTask.GetAwaiter().GetResult()
         $results.Add([pscustomobject]@{
             name = $Name
-            status = if ($process.ExitCode -eq 0) { 'passed' } else { 'failed' }
+            status = if ($process.ExitCode -eq 0 -and -not $timedOut) { 'passed' } else { 'failed' }
             exitCode = $process.ExitCode
+            timedOut = $timedOut
             stdout = [IO.Path]::GetFileName($stdoutPath)
             stderr = [IO.Path]::GetFileName($stderrPath)
         })
+        if ($timedOut) {
+            throw "$Name exceeded the five-minute offline check limit. See $stdoutPath and $stderrPath"
+        }
         if ($process.ExitCode -ne 0) {
             throw "$Name failed with exit code $($process.ExitCode). See $stdoutPath and $stderrPath"
         }

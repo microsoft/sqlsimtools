@@ -408,12 +408,14 @@ Test-Case 'Studio survives the machine sleeping' {
     # The closest a test can get to closing a laptop lid: suspend every thread
     # so no time passes for the process while the clock keeps running. This is
     # the failure that started the redesign, and it must stay fixed.
-    if ($IsWindows -and -not ('Native.ProcessControl' -as [type])) {
+    if (-not ('Native.ProcessControl' -as [type])) {
         Add-Type -Namespace Native -Name ProcessControl -MemberDefinition @'
 [System.Runtime.InteropServices.DllImport("ntdll.dll")]
 public static extern int NtSuspendProcess(System.IntPtr processHandle);
 [System.Runtime.InteropServices.DllImport("ntdll.dll")]
 public static extern int NtResumeProcess(System.IntPtr processHandle);
+[System.Runtime.InteropServices.DllImport("libc", EntryPoint = "kill", SetLastError = true)]
+public static extern int SendSignal(int processId, int signal);
 '@
     }
 
@@ -430,16 +432,21 @@ public static extern int NtResumeProcess(System.IntPtr processHandle);
             $status = [Native.ProcessControl]::NtSuspendProcess($proc.Handle)
             if ($status -ne 0) { return "suspending Studio failed: $status" }
         } else {
-            & /bin/kill -STOP $proc.Id
-            if ($LASTEXITCODE -ne 0) { return 'suspending Studio with SIGSTOP failed' }
+            # Darwin and Linux assign different numbers to STOP and CONT.
+            $stopSignal = if ($IsMacOS) { 17 } else { 19 }
+            $continueSignal = if ($IsMacOS) { 19 } else { 18 }
+            if ([Native.ProcessControl]::SendSignal($proc.Id, $stopSignal) -ne 0) {
+                return "SIGSTOP failed: $([Runtime.InteropServices.Marshal]::GetLastPInvokeError())"
+            }
         }
         Start-Sleep -Seconds 15
         if ($IsWindows) {
             $status = [Native.ProcessControl]::NtResumeProcess($proc.Handle)
             if ($status -ne 0) { return "resuming Studio failed: $status" }
         } else {
-            & /bin/kill -CONT $proc.Id
-            if ($LASTEXITCODE -ne 0) { return 'resuming Studio with SIGCONT failed' }
+            if ([Native.ProcessControl]::SendSignal($proc.Id, $continueSignal) -ne 0) {
+                return "SIGCONT failed: $([Runtime.InteropServices.Marshal]::GetLastPInvokeError())"
+            }
         }
         Start-Sleep -Seconds 3
 

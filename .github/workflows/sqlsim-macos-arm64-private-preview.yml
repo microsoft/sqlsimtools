@@ -157,6 +157,7 @@ jobs:
           tar -C "$RUNNER_TEMP/verify/tester-kit" -xzf "$RUNNER_TEMP/artifacts/sqlsimtools-macos-arm64-tester-kit.tar.gz"
 
       - name: Validate extracted tester kit and runner safety gates
+        timeout-minutes: 15
         shell: pwsh
         run: |
           ./scripts/check-suite-parity.ps1 -Quiet

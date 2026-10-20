@@ -46,6 +46,9 @@ tests, and Studio startup plus its full offline validation suite. No configured
 database is contacted. Some native rejection tests probe a reserved,
 unreachable address to validate error reporting.
 
+Each offline check has a five-minute limit. A timeout stops that check's process
+tree, fails the run, and records `timedOut: true` alongside its logs.
+
 To test just one tool, add `-Tool sqlsim`, `-Tool sqlpysim`, or
 `-Tool sqlsimstudio`. Python/Studio selections require the Python environment;
 the native-only selection does not.
