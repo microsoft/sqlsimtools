@@ -11,8 +11,8 @@ $root = (Resolve-Path -LiteralPath $KitRoot).Path
 if (Test-Path -LiteralPath $ValidationDirectory) { throw 'ValidationDirectory must be a new directory.' }
 New-Item -ItemType Directory -Path $ValidationDirectory -Force | Out-Null
 $runner = Join-Path $root 'run-tests.ps1'
-$pwsh = (Get-Command pwsh -CommandType Application -ErrorAction Stop).Source
-$bash = (Get-Command bash -CommandType Application -ErrorAction Stop).Source
+$pwsh = (Get-Command pwsh -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+$bash = (Get-Command bash -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 $dummySecret = Join-Path $ValidationDirectory 'synthetic-token.txt'
 $emptySecret = Join-Path $ValidationDirectory 'empty-token.txt'
 Set-Content -LiteralPath $dummySecret -Value 'synthetic-noncredential'
@@ -64,7 +64,7 @@ Assert-Rejected 'scale cannot bypass full tier' @('-Tier', 'Smoke', '-AllowLiveT
     '-Database', 'test', '-TokenFile', $dummySecret, '-IncludeScale') 'IncludeScale applies only'
 
 $failureReports = Join-Path $ValidationDirectory 'expected-failure-results'
-$falseExecutable = (Get-Command false -CommandType Application -ErrorAction Stop).Source
+$falseExecutable = (Get-Command false -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 & $pwsh -NoProfile -File $runner -Tier Offline -Tool sqlpysim -Python $falseExecutable -ReportDirectory $failureReports
 if ($LASTEXITCODE -eq 0) { throw 'A failed prerequisite was reported as success.' }
 $failureReport = Get-Content -LiteralPath (Join-Path $failureReports 'results.json') -Raw | ConvertFrom-Json

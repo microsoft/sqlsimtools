@@ -47,11 +47,11 @@ if ($IncludeScale -and ($Tier -ne 'Full' -or $Tool -notcontains 'sqlsim')) {
 }
 
 $root = $PSScriptRoot
-$bash = (Get-Command bash -CommandType Application -ErrorAction Stop).Source
-$pwsh = (Get-Command pwsh -CommandType Application -ErrorAction Stop).Source
+$bash = (Get-Command bash -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+$pwsh = (Get-Command pwsh -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 $pythonPath = $null
 if ($Tool -contains 'sqlpysim' -or $Tool -contains 'sqlsimstudio') {
-    $pythonPath = (Get-Command $Python -CommandType Application -ErrorAction Stop).Source
+    $pythonPath = (Get-Command $Python -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
 }
 if (-not $ReportDirectory) {
     $ReportDirectory = Join-Path $root ('results/{0}-{1}' -f (Get-Date -Format 'yyyyMMdd-HHmmss'), [guid]::NewGuid().ToString('N'))
