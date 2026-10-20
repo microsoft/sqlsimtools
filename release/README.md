@@ -34,6 +34,10 @@ as evidence that a release artifact is correct.
 | `build-macos-tester-kit.ps1` | Assembles a self-contained macOS test installation from validated candidate packages and canonical suites |
 | `run-macos-tests.ps1` | Tester-kit runner; defaults to offline checks, gates live/load testing, and writes JSON plus logs |
 | `macos-tester-README.md` | Instructions shipped as the tester kit's README |
+| `build-studio-preview-kit.ps1` | Stages Ubuntu x64/Windows ARM64 Studio Private Preview kits from existing publisher output and canonical Studio suites |
+| `run-studio-preview-tests.ps1` | Native-platform Studio tester runner with offline defaults, live/load consent, credential files, and JSON/log reports |
+| `test-studio-preview-kit.ps1` | Validates extracted Studio preview kit architecture, safety gates, failure reports, and complete offline results |
+| `studio-preview-tester-README.md` | Private Preview testing and feedback instructions shipped in both Studio kits |
 | `validate-package-layout.ps1` | Validates an extracted tool package and its documented entry points |
 | `check-release-version.ps1` | Confirms version parity across every shipped tool |
 | `stage-release-assets.ps1` | Stages the five versioned public release assets; the README links to the latest release page |

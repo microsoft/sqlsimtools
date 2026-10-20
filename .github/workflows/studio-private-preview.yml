@@ -1,0 +1,191 @@
+name: Studio Ubuntu and Windows ARM64 Private Preview
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/studio-private-preview.yml'
+      - 'sqlsim/**'
+      - 'sqlpysim/**'
+      - 'sqlsimstudio/**'
+      - 'release/**'
+      - '.github/skills/sqlsimstudio/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/studio-private-preview.yml'
+      - 'sqlsim/**'
+      - 'sqlpysim/**'
+      - 'sqlsimstudio/**'
+      - 'release/**'
+      - '.github/skills/sqlsimstudio/**'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Native build and extracted kit (${{ matrix.runtime }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            runtime: linux-x64
+            python: x64
+          - os: windows-11-arm
+            runtime: win-arm64
+            python: arm64
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+          architecture: ${{ matrix.python }}
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          dotnet-version: '10.0.x'
+      - name: Linux build prerequisites
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake unixodbc-dev pandoc libltdl7
+      - name: Windows manual prerequisite
+        if: runner.os == 'Windows'
+        uses: pandoc/actions/setup@86321b6dd4675f5014c611e05088e10d4939e09e # v1
+        with:
+          version: '3.5'
+      - name: Native Python driver
+        working-directory: sqlpysim
+        run: |
+          python -m pip install --only-binary=:all: -r requirements.txt
+          if ($LASTEXITCODE -ne 0) { throw 'Native pinned Python driver installation failed.' }
+      - name: Build matching native engine
+        working-directory: sqlsim
+        run: |
+          if ($IsWindows) {
+            if ([Runtime.InteropServices.RuntimeInformation]::OSArchitecture -ne 'Arm64') {
+              throw 'Windows validation requires native ARM64 hardware.'
+            }
+            ./build.ps1
+          } else {
+            bash ./build-linux.sh --clean
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Native engine build failed.' }
+      - name: Build Studio
+        working-directory: sqlsimstudio
+        run: |
+          if ($IsWindows) { ./build.ps1 -Runtime win-arm64 }
+          else { bash ./build-linux.sh linux-x64 }
+          if ($LASTEXITCODE -ne 0) { throw 'Studio build failed.' }
+      - name: Assemble Private Preview tester kit
+        env:
+          PREVIEW_COMMIT: ${{ github.sha }}
+          PREVIEW_BUILD: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          ./release/build-studio-preview-kit.ps1 `
+            -StudioRoot 'sqlsimstudio/build/${{ matrix.runtime }}' `
+            -Runtime '${{ matrix.runtime }}' -Commit $env:PREVIEW_COMMIT -BuildUrl $env:PREVIEW_BUILD `
+            -OutputDirectory '${{ runner.temp }}/studio-kit'
+      - name: Archive and re-extract kit
+        run: |
+          $out = '${{ runner.temp }}/preview-archives'
+          $verify = '${{ runner.temp }}/extracted-kit'
+          New-Item -ItemType Directory -Path $out, $verify | Out-Null
+          $name = 'sqlsimstudio-${{ matrix.runtime }}-private-preview-tester-kit'
+          if ($IsWindows) {
+            $archive = Join-Path $out "$name.zip"
+            tar -a -cf $archive -C '${{ runner.temp }}/studio-kit' .
+            if ($LASTEXITCODE -ne 0) { throw 'Windows archive creation failed.' }
+          } else {
+            $archive = Join-Path $out "$name.tar.gz"
+            tar -czf $archive -C '${{ runner.temp }}/studio-kit' .
+            if ($LASTEXITCODE -ne 0) { throw 'Linux archive creation failed.' }
+          }
+          tar -xf $archive -C $verify
+          if ($LASTEXITCODE -ne 0) { throw 'Archive extraction failed.' }
+          $hash = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $(Split-Path $archive -Leaf)" | Set-Content (Join-Path $out 'SHA256SUMS') -Encoding ascii
+          Copy-Item '${{ runner.temp }}/studio-kit/BUILD-INFO.json' $out
+      - name: Validate extracted kit and safety gates
+        timeout-minutes: 15
+        run: |
+          ./release/test-studio-preview-kit.ps1 -KitRoot '${{ runner.temp }}/extracted-kit' `
+            -ValidationDirectory '${{ runner.temp }}/studio-validation'
+          if ($LASTEXITCODE -ne 0) { throw 'Extracted kit validation failed.' }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: studio-preview-results-${{ matrix.runtime }}
+          path: ${{ runner.temp }}/studio-validation/offline-results/
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: studio-preview-input-${{ matrix.runtime }}
+          path: ${{ runner.temp }}/preview-archives/
+          if-no-files-found: error
+
+  ubuntu-26:
+    name: Same Linux archive on Ubuntu 26.04
+    needs: build
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+          architecture: x64
+      - name: Runtime prerequisites
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unixodbc libltdl7 file
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: studio-preview-input-linux-x64
+          path: ${{ runner.temp }}/preview-input
+      - name: Verify and extract unchanged Ubuntu 24.04 archive
+        run: |
+          cd "$RUNNER_TEMP/preview-input"
+          sha256sum -c SHA256SUMS
+          mkdir "$RUNNER_TEMP/extracted-kit"
+          tar -xzf sqlsimstudio-linux-x64-private-preview-tester-kit.tar.gz -C "$RUNNER_TEMP/extracted-kit"
+          python -m pip install --only-binary=:all: -r "$RUNNER_TEMP/extracted-kit/sqlsimstudio/sqlpysim/requirements.txt"
+      - name: Validate extracted kit on Ubuntu 26.04
+        timeout-minutes: 15
+        shell: pwsh
+        run: |
+          ./release/test-studio-preview-kit.ps1 -KitRoot '${{ runner.temp }}/extracted-kit' `
+            -ValidationDirectory '${{ runner.temp }}/studio-validation'
+          if ($LASTEXITCODE -ne 0) { throw 'Ubuntu 26.04 kit validation failed.' }
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: studio-preview-results-ubuntu-26
+          path: ${{ runner.temp }}/studio-validation/offline-results/
+          if-no-files-found: ignore
+
+  candidate:
+    name: Validated Private Preview candidate
+    needs: [build, ubuntu-26]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          pattern: studio-preview-input-*
+          path: ${{ runner.temp }}/candidate
+      - name: Verify both platform checksums
+        run: |
+          for platform in linux-x64 win-arm64; do
+            (cd "$RUNNER_TEMP/candidate/studio-preview-input-$platform" && sha256sum -c SHA256SUMS)
+          done
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sqlsimstudio-ubuntu-windows-arm64-private-preview
+          path: ${{ runner.temp }}/candidate/
+          if-no-files-found: error

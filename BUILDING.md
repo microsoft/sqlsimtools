@@ -128,6 +128,38 @@ run the macOS workflow. The long-term live-testing backend is deliberately
 undecided; see [MACOS-SUPPORT-PLAN.md](MACOS-SUPPORT-PLAN.md) for the maintained
 platform plan and promotion gates.
 
+### Studio Ubuntu x64 and Windows ARM64 Private Preview kits
+
+The [Studio preview workflow](.github/workflows/studio-private-preview.yml)
+builds with the existing sqlsim and Studio scripts on Ubuntu 24.04 x64 and a
+native Windows 11 ARM64 runner. Both use native Python 3.11 and the pinned
+`mssql-python` wheel, not Python emulation. It runs on relevant PR/main changes
+and can also be dispatched:
+
+```powershell
+gh workflow run studio-private-preview.yml --repo microsoft/sqlsimtools --ref main
+```
+
+The final `sqlsimstudio-ubuntu-windows-arm64-private-preview` artifact is uploaded
+only after native architecture/layout checks, runner refusal/failure-report
+tests, and extracted-kit offline checks pass on both targets, plus an unchanged
+Ubuntu 24.04-built archive passes on Ubuntu 26.04. Its platform subdirectories
+contain a self-contained tester kit, `SHA256SUMS`, and `BUILD-INFO.json`.
+Windows uses ZIP; Ubuntu uses tar.gz so executable permissions survive.
+
+The [kit README](release/studio-preview-tester-README.md) covers setup, examples,
+manual browser checks, explicit live/load consent, credential files, and reports.
+These platforms remain **Private Preview - testing only**, outside public release
+assets. Artifacts require GitHub sign-in and expire; they are not confidential.
+Use an existing Private Preview request issue for testing assistance and feedback.
+
+Maintainers own these repeatable native build and offline package gates. Before
+promotion, separately record maintainer-controlled live smoke/full results,
+authentication/SQL-target coverage, real browser and clean-install evidence,
+and signing/distribution decisions. As with the [macOS support plan](MACOS-SUPPORT-PLAN.md),
+volunteers supplement rather than replace maintainer validation. No live backend,
+credentials, or infrastructure is selected or provisioned by this workflow.
+
 ## Prepare for source testing
 
 After building sqlsim and preparing sqlpysim, run the shared test preflight
