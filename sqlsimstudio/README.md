@@ -14,6 +14,23 @@ sqlsim Studio is a local browser interface for configuring, running, monitoring,
 | Windows | ARM64 | Private Preview | Invited testers; native validation required |
 | macOS | ARM64 | Private Preview | Invited testers; signing, notarization, and native validation required |
 
+### Invited Ubuntu and Windows ARM64 testing
+
+The [Studio preview workflow](../.github/workflows/studio-private-preview.yml)
+builds native Ubuntu x64 and Windows ARM64 tester kits using the existing
+publishers and canonical Studio suites. The Ubuntu 24.04-built archive is also
+tested unchanged on Ubuntu 26.04. Each kit includes examples, provenance,
+offline-default checks, optional explicitly acknowledged live/load suites,
+credential-file handling, and JSON/log reports.
+
+These are Actions artifacts, not public release assets or confidential storage.
+They remain **Private Preview - testing only**; native offline success does not
+establish live SQL correctness, clean-machine installation, signing, or actual
+browser behavior. Open a [Private Preview request](https://github.com/microsoft/sqlsimtools/issues/new?template=private-preview.yml)
+for participation/testing assistance, and use that issue for sanitized feedback.
+The [kit instructions](../release/studio-preview-tester-README.md) describe the
+requirements and safety limits.
+
 ## Browser Support
 
 Studio targets current stable releases of:
