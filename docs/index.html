@@ -17,14 +17,14 @@
     }
   </script>
   <title>sqlsimtools: SQL Server load testing and workload simulation tools</title>
-  <meta name="description" content="Open-source SQL Server load testing and benchmarking tools. Run, monitor, replay, and compare workloads on SQL Server, Azure SQL, and SQL database in Microsoft Fabric.">
+  <meta name="description" content="See how your SQL database handles a workload. Configure queries, run concurrent users, and watch performance live with sqlsim Studio. Free, open-source tools for SQL Server, Azure SQL, and Microsoft Fabric.">
   <link rel="canonical" href="https://microsoft.github.io/sqlsimtools/">
   <link rel="icon" href="assets/sqlsim-icon.svg" type="image/svg+xml">
   <link rel="describedby" href="llms.txt" type="text/markdown">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="sqlsimtools">
   <meta property="og:title" content="sqlsimtools: SQL Server load testing and workload simulation tools">
-  <meta property="og:description" content="Run, monitor, replay, and compare SQL workloads with a browser studio, a native ODBC CLI, Python, or an AI workload agent.">
+  <meta property="og:description" content="Configure queries, run concurrent users, and watch SQL performance live with sqlsim Studio. Download the free Windows toolkit, or automate with the native CLI, Python, and agents.">
   <meta property="og:url" content="https://microsoft.github.io/sqlsimtools/">
   <meta property="og:image" content="https://microsoft.github.io/sqlsimtools/assets/sqlsimtools-social-preview.png">
   <meta property="og:image:width" content="1280">
@@ -175,10 +175,10 @@
       justify-content: space-between;
       gap: 20px;
     }
-    .brand { display: flex; align-items: center; text-decoration: none; }
-    .brand-logo { display: block; width: 174px; height: 36px; object-fit: contain; object-position: left center; }
+    .brand { display: flex; align-items: center; min-width: 0; text-decoration: none; }
+    .brand-logo { display: block; width: 174px; max-width: 100%; height: 36px; object-fit: contain; object-position: left center; }
     html[data-theme="dark"] .brand-logo { filter: brightness(0) invert(1); }
-    .nav-links { display: flex; align-items: center; gap: 22px; }
+    .nav-links { display: flex; flex-shrink: 0; align-items: center; gap: 22px; }
     .nav-links a { color: var(--cp-text-muted); font-size: 14px; text-decoration: none; }
     .nav-links a:hover { color: var(--cp-text); }
     .theme-button {
@@ -192,8 +192,8 @@
     .hero {
       padding: 38px 0 34px;
       display: grid;
-      grid-template-columns: minmax(0, 1.25fr) minmax(320px, .75fr);
-      gap: 48px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+      gap: 36px;
       align-items: center;
     }
     .eyebrow {
@@ -241,40 +241,45 @@
     }
     .button.primary { border-color: var(--cp-link); background: var(--cp-link); color: var(--cp-accent-fg); }
     .button.primary:hover { border-color: var(--cp-border-strong); }
-    .terminal {
+    a:focus-visible, button:focus-visible { outline: 3px solid var(--cp-link); outline-offset: 4px; }
+    [id] { scroll-margin-top: 76px; }
+    .download-note, .cli-link { color: var(--cp-text-muted); font-size: 14px; line-height: 1.5; }
+    .download-note { margin: 12px 0 0; }
+    .cli-link { margin: 12px 0 0; }
+    .cli-link a, .download-note a { color: var(--cp-link); }
+    .demo {
+      margin: 0;
       border: 1px solid var(--cp-border);
       border-radius: 16px;
       overflow: hidden;
       background: var(--cp-surface);
       box-shadow: var(--cp-shadow);
     }
-    .terminal-head {
+    .demo-head {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
       border-bottom: 1px solid var(--cp-border);
       padding: 12px 14px;
       color: var(--cp-text-muted);
-      font-size: 12px;
+      font-size: 14px;
     }
-    .terminal-body {
-      min-height: 190px;
-      padding: 16px;
-      background: var(--cp-bg-elevated);
-      font-family: Consolas, "Courier New", Courier, monospace;
-      font-size: 12px;
-      line-height: 1.6;
-      overflow: auto;
-    }
-    .prompt { color: var(--cp-link); }
-    .muted { color: var(--cp-text-muted); }
-    .success { color: var(--cp-success); }
-    .copy {
-      border: 0;
-      background: transparent;
+    .demo img { display: block; width: 100%; height: auto; }
+    .demo figcaption { padding: 12px 14px; color: var(--cp-text-muted); font-size: 14px; line-height: 1.5; }
+    .demo figcaption a { color: var(--cp-link); }
+    .demo-toggle {
+      border: 1px solid var(--cp-border);
+      border-radius: 0.625rem;
+      padding: 8px 12px;
+      background: var(--cp-surface-soft);
       color: var(--cp-link);
       cursor: pointer;
-      font-size: 12px;
+      font-weight: 700;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
     }
     section { padding: 38px 0; }
     .section-head { max-width: 720px; margin-bottom: 18px; }
@@ -332,6 +337,7 @@
       border: 1px solid var(--cp-border);
       border-radius: 16px;
       background: var(--cp-surface);
+      overflow-wrap: anywhere;
     }
     .step strong { display: block; margin-bottom: 4px; }
     .step strong a { color: var(--cp-link); text-decoration: none; }
@@ -374,28 +380,24 @@
   <main id="top">
     <div class="shell hero">
       <div>
-        <span class="eyebrow"><span class="dot"></span> Public Preview</span>
-        <h1>Test SQL workloads.<br><em>Your way.</em></h1>
-        <p class="lede">Build, run, monitor, replay, and compare SQL Server workloads with a visual Studio, a native CLI, Python, or an AI workload agent.</p>
+        <span class="eyebrow"><span class="dot"></span> Free &amp; open source · Public Preview</span>
+        <h1>See how your SQL database <em>handles a workload.</em></h1>
+        <p class="lede">Configure queries, run concurrent users, and watch performance live with sqlsim Studio. Go from a single query to a repeatable load test in a local browser app.</p>
         <div class="actions">
-          <a class="button primary" href="https://github.com/microsoft/sqlsimtools/releases/latest">Download latest release →</a>
-          <a class="button" href="https://github.com/microsoft/sqlsimtools">View on GitHub</a>
+          <a class="button primary" href="https://github.com/microsoft/sqlsimtools/releases/download/v1.0.0/sqlsimtools-1.0.0-win-x64.zip">Download for Windows →</a>
+          <a class="button" href="#quickstart">Run your first workload</a>
         </div>
+        <p class="download-note">v1.0.0 · Windows x64 · Includes Studio and both CLIs.<br>Requires ODBC Driver 18 and access to a SQL database. No .NET install needed. <a href="https://github.com/microsoft/sqlsimtools/blob/main/INSTALL.md#install-sqlsim-studio">Installation guide</a></p>
+        <p class="cli-link">Prefer the command line? <a href="#ways">Explore sqlsim and sqlpysim</a>, including Linux options.</p>
       </div>
-      <div class="terminal" aria-label="sqlsim command example">
-        <div class="terminal-head"><span>Quick workload</span><button class="copy" id="copy-command" type="button">Copy command</button></div>
-        <div class="terminal-body">
-          <div><span class="prompt">PS&gt;</span> <span id="command">.\sqlsim\x64\sqlsim.exe -S localhost -E -Q "SELECT @@VERSION"</span></div>
-          <br>
-          <div class="muted">Connecting with Windows authentication...</div>
-          <div class="success">Connected successfully (18 ms)</div>
-          <div class="muted">ODBC Driver 18.5 · SQL Server 2025</div>
-          <br>
-          <div>Total executions&nbsp;&nbsp;&nbsp; 1</div>
-          <div>Total runtime&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 0.041 sec</div>
-          <div>Throughput&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; 24.39 exec/sec</div>
+      <figure class="demo" id="demo">
+        <div class="demo-head">
+          <span>See sqlsim Studio in action</span>
+          <button class="demo-toggle" id="demo-toggle" type="button" aria-controls="studio-demo" aria-pressed="false" hidden>Play walkthrough</button>
         </div>
-      </div>
+        <img id="studio-demo" src="assets/sqlsimstudio-blog-hero.png" alt="sqlsim Studio workload configuration and live monitoring interface" width="1440" height="900">
+        <figcaption>Configure a workload, watch live monitoring, then review and compare results. <a href="https://github.com/microsoft/sqlsimtools/blob/main/sqlsimstudio/README.md">Read the Studio walkthrough →</a></figcaption>
+      </figure>
     </div>
 
     <section id="ways" class="shell">
@@ -448,13 +450,13 @@
 
     <section id="quickstart" class="shell quickstart">
       <div class="section-head">
-        <h2>From download to first result</h2>
-        <p>No hosted service. No telemetry sent elsewhere. The tools run locally and connect directly to the SQL target you choose.</p>
+        <h2>Run your first workload</h2>
+        <p>Start with Studio on Windows. No hosted service, no .NET install, and no telemetry sent elsewhere. Use a development or test database you have permission to load test.</p>
       </div>
       <div class="steps">
-        <div class="step"><span class="card-index">1</span><div><strong><a href="https://github.com/microsoft/sqlsimtools/blob/main/INSTALL.md">Install the prerequisite →</a></strong><span>ODBC Driver 18 for sqlsim and Studio; Python 3.10+ for sqlpysim.</span></div></div>
-        <div class="step"><span class="card-index">2</span><div><strong><a href="https://github.com/microsoft/sqlsimtools/releases/latest">Download one package →</a></strong><span>Choose the complete Windows bundle or an individual command-line tool.</span></div></div>
-        <div class="step"><span class="card-index">3</span><div><strong><a href="https://github.com/microsoft/sqlsimtools#get-started">Choose one of four paths →</a></strong><span>Studio, native ODBC, mssql-python, or the Workload Builder agent.</span></div></div>
+        <div class="step"><span class="card-index">1</span><div><strong><a href="https://github.com/microsoft/sqlsimtools/blob/main/INSTALL.md#install-sqlsim-studio">Download and extract →</a></strong><span>Install Microsoft ODBC Driver 18. Download the Windows bundle, unblock the trusted ZIP in Properties, then extract it. Keep the folder structure intact.</span></div></div>
+        <div class="step"><span class="card-index">2</span><div><strong>Open Studio and connect</strong><span>Double-click <code>sqlsimstudio\sqlsimstudio.exe</code>. In your browser, choose your SQL server, database, and authentication method.</span></div></div>
+        <div class="step"><span class="card-index">3</span><div><strong><a href="https://github.com/microsoft/sqlsimtools/blob/main/sqlsimstudio/README.md">Run, watch, and compare →</a></strong><span>Enter a query, start with a small thread and iteration count, and run it. Watch live progress and review results before increasing the load.</span></div></div>
       </div>
     </section>
 
@@ -479,10 +481,18 @@
       document.documentElement.setAttribute("data-theme", next);
       updateThemeLabel();
     });
-    document.getElementById("copy-command").addEventListener("click", async (event) => {
-      await navigator.clipboard.writeText(document.getElementById("command").textContent);
-      event.currentTarget.textContent = "Copied";
-      window.setTimeout(() => { event.currentTarget.textContent = "Copy command"; }, 1200);
+    const demoToggle = document.getElementById("demo-toggle");
+    const studioDemo = document.getElementById("studio-demo");
+    const demoPoster = studioDemo.getAttribute("src");
+    demoToggle.hidden = false;
+    demoToggle.addEventListener("click", () => {
+      const playing = demoToggle.getAttribute("aria-pressed") !== "true";
+      studioDemo.src = playing ? "assets/sqlsimstudio-demo.gif" : demoPoster;
+      studioDemo.alt = playing
+        ? "Studio walkthrough showing workloads, live monitoring, results, and comparisons"
+        : "sqlsim Studio workload configuration and live monitoring interface";
+      demoToggle.setAttribute("aria-pressed", String(playing));
+      demoToggle.textContent = playing ? "Stop walkthrough" : "Play walkthrough";
     });
   </script>
 </body>

@@ -10,8 +10,8 @@ its tools.
 | `sqlsim-icon.svg` | Studio favicon, app icon, small displays |
 | `sqlsim-logo.svg` | Generated sqlsim HTML documentation |
 | `sqlsimtools-logo.svg` | Root README and project branding |
-| `sqlsimstudio-demo.gif` | Studio walkthrough animation for blog and social posts |
-| `sqlsimstudio-blog-hero.png` | Blog and social posts |
+| `sqlsimstudio-demo.gif` | Click-to-play Studio walkthrough on the landing page; blog and social posts |
+| `sqlsimstudio-blog-hero.png` | Landing-page walkthrough poster; blog and social posts |
 | `sqlsimtools-four-ways.png` | Root README; four-quadrant Studio, CLI, and GitHub Copilot overview |
 | `sqlsimtools-four-ways-blog.png` | 2.4:1 four-quadrant blog banner |
 | `sqlsimtools-social-preview.png` | 1280x640 GitHub social preview (Settings > General > Social preview); the four-quadrant banner padded to 2:1. Also copied to `docs/assets/` for the GitHub Pages link-preview image |
@@ -19,8 +19,11 @@ its tools.
 
 The GitHub Pages site serves only `docs/`, so `docs/assets/` keeps copies of
 `sqlsimtools-logo.svg`, `sqlsim-icon.svg` (site icon), and
-`sqlsimtools-social-preview.png`. Update those copies when you change the
-originals.
+`sqlsimtools-social-preview.png`, `sqlsimstudio-demo.gif`, and
+`sqlsimstudio-blog-hero.png`. Update those copies when you change the originals.
+The landing page does not load the animated GIF until the visitor plays it.
+When publishing a new release, update the versioned Windows bundle download
+link and version label in `docs/index.html`.
 
 ## Design Elements
 
