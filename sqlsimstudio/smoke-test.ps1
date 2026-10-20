@@ -54,6 +54,9 @@ try {
         }
 
         $line = $readTask.Result
+        if ($null -eq $line -and $process.HasExited) {
+            throw "Studio exited with code $($process.ExitCode) before startup: $($process.StandardError.ReadToEnd())"
+        }
         if ($line -like 'SQLSIM_STUDIO_URL=*') {
             $baseUrl = $line.Substring('SQLSIM_STUDIO_URL='.Length)
         } elseif ($line -eq 'SQLSIM_STUDIO_BOOTSTRAP_READY=1') {
