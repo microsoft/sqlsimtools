@@ -2,6 +2,19 @@ name: sqlsimtools macOS ARM64 Private Preview
 
 on:
   workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/sqlsim-macos-arm64-private-preview.yml'
+      - 'sqlsim/**'
+      - 'sqlpysim/**'
+      - 'sqlsimstudio/**'
+      - 'release/**'
+      - '.github/skills/sqlsim/**'
+      - '.github/skills/sqlpysim/**'
+      - '.github/skills/sqlsimstudio/**'
+      - '.github/agents/sqlsimtools-workload-builder.agent.md'
   push:
     branches:
       - main
@@ -32,7 +45,7 @@ jobs:
           sw_vers
 
       - name: Install build prerequisites
-        run: brew install cmake unixodbc openssl pandoc
+        run: brew install cmake unixodbc openssl pandoc coreutils jq
 
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
@@ -90,9 +103,6 @@ jobs:
             mkdir -p "$RUNNER_TEMP/verify/$tool"
             tar -C "$RUNNER_TEMP/verify/$tool" -xzf "$archive"
           done
-          cd "$RUNNER_TEMP/artifacts"
-          shasum -a 256 ./*.tar.gz > SHA256SUMS
-          shasum -a 256 -c SHA256SUMS
 
       - name: Validate extracted CLI packages
         shell: pwsh
@@ -130,14 +140,44 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Bundled sqlsim could not start.' }
           & python (Join-Path $studio 'sqlpysim/sqlpysim.py') --version
           if ($LASTEXITCODE -ne 0) { throw 'Bundled sqlpysim could not start.' }
-          Push-Location sqlsimstudio
-          try {
-            ./smoke-test.ps1 -SkipBuild -StartupOnly `
-              -StudioExecutable (Join-Path $studio 'sqlsimstudio')
-            if ($LASTEXITCODE -ne 0) { throw 'Studio startup smoke test failed.' }
-          } finally {
-            Pop-Location
-          }
+
+      - name: Assemble self-contained tester kit
+        shell: pwsh
+        run: |
+          ./release/build-macos-tester-kit.ps1 `
+            -SqlsimRoot '${{ runner.temp }}/verify/sqlsim' `
+            -SqlpysimRoot '${{ runner.temp }}/verify/sqlpysim' `
+            -StudioRoot '${{ runner.temp }}/verify/sqlsimstudio' `
+            -OutputDirectory '${{ runner.temp }}/tester-kit'
+
+      - name: Archive and extract tester kit
+        run: |
+          tar -C "$RUNNER_TEMP/tester-kit" -czf "$RUNNER_TEMP/artifacts/sqlsimtools-macos-arm64-tester-kit.tar.gz" .
+          mkdir -p "$RUNNER_TEMP/verify/tester-kit"
+          tar -C "$RUNNER_TEMP/verify/tester-kit" -xzf "$RUNNER_TEMP/artifacts/sqlsimtools-macos-arm64-tester-kit.tar.gz"
+
+      - name: Validate extracted tester kit and runner safety gates
+        shell: pwsh
+        run: |
+          ./scripts/check-suite-parity.ps1 -Quiet
+          if ($LASTEXITCODE -ne 0) { throw 'Shared suite inventories diverged.' }
+          ./release/test-macos-tester-kit.ps1 `
+            -KitRoot '${{ runner.temp }}/verify/tester-kit' `
+            -ValidationDirectory '${{ runner.temp }}/tester-kit-validation'
+          if ($LASTEXITCODE -ne 0) { throw 'Tester kit validation failed.' }
+
+      - name: Checksum all candidate archives
+        run: |
+          cd "$RUNNER_TEMP/artifacts"
+          shasum -a 256 ./*.tar.gz > SHA256SUMS
+          shasum -a 256 -c SHA256SUMS
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: macos-tester-kit-offline-results
+          path: ${{ runner.temp }}/tester-kit-validation/offline-results/
+          if-no-files-found: ignore
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

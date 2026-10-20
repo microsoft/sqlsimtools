@@ -61,10 +61,23 @@ param(
     [string]$StudioExecutable,
     [switch]$SkipBuild,
     [switch]$OfflineOnly,
-    [switch]$StopOnError
+    [switch]$StopOnError,
+    [ValidateSet('integrated', 'sql', 'token')]
+    [string]$Authentication = 'integrated',
+    [string]$Username,
+    [string]$SecretFile
 )
 
 $ErrorActionPreference = 'Stop'
+$testSecret = $null
+if (-not $OfflineOnly -and $Authentication -ne 'integrated') {
+    if (-not $SecretFile -or ($Authentication -eq 'sql' -and -not $Username)) {
+        throw 'SQL authentication requires Username and SecretFile; token authentication requires SecretFile.'
+    }
+    $testSecret = Get-Content -LiteralPath $SecretFile -TotalCount 1
+    if (-not $testSecret) { throw 'SecretFile must contain a non-empty first line.' }
+}
+$liveAuthentication = $false
 $studioRoot = $PSScriptRoot
 $projectPath = Join-Path $studioRoot 'server\SqlsimStudio.csproj'
 $dllPath = Join-Path $studioRoot 'server\bin\Release\net10.0\sqlsimstudio.dll'
@@ -78,9 +91,19 @@ $settingsDirectory = Join-Path ([IO.Path]::GetTempPath()) ("sqlsimstudio-full-se
 # /api/engines is that sqlsim was not found.
 $sqlsimCandidates = if ($StudioExecutable) {
     $studioDirectory = Split-Path -Parent (Resolve-Path $StudioExecutable).Path
-    @((Join-Path $studioDirectory 'sqlsim\sqlsim.exe'), (Join-Path $studioDirectory '..\sqlsim\x64\sqlsim.exe'))
+    if ($IsWindows) {
+        @((Join-Path $studioDirectory 'sqlsim\sqlsim.exe'), (Join-Path $studioDirectory '..\sqlsim\x64\sqlsim.exe'))
+    } else {
+        @(Join-Path $studioDirectory 'sqlsim/sqlsim')
+    }
 } else {
-    @(Join-Path $studioRoot '..\sqlsim\build\x64\Release\sqlsim.exe')
+    if ($IsWindows) {
+        @(Join-Path $studioRoot '..\sqlsim\build\x64\Release\sqlsim.exe')
+    } elseif ($IsMacOS) {
+        @(Join-Path $studioRoot '../sqlsim/build/macos-arm64/sqlsim')
+    } else {
+        @(Join-Path $studioRoot '../sqlsim/build/linux-x64/sqlsim')
+    }
 }
 $sqlsimExpected = [bool]$env:SQLSIM_STUDIO_SQLSIM_PATH -or [bool]($sqlsimCandidates | Where-Object { Test-Path -LiteralPath $_ })
 
@@ -523,6 +546,11 @@ try {
             threads = 1; iterations = 1; quiet = $true
             trustServerCertificate = $true; stopOnError = $true
             telemetry = 'final'; statisticsSource = 'none'
+        }
+        if ($liveAuthentication) {
+            $payload.authentication = $Authentication
+            $payload.username = if ($Authentication -eq 'sql') { $Username } else { $null }
+            $payload.secret = $testSecret
         }
         foreach ($key in $Overrides.Keys) { $payload[$key] = $Overrides[$key] }
         return $payload
@@ -1057,6 +1085,7 @@ try {
     # -----------------------------------------------------------------------
 
     if (-not $OfflineOnly) {
+        $liveAuthentication = $true
         Write-Section '9. Connection failure reporting'
 
         Test-Case 'connection test to an unreachable port reports a specific failure' {

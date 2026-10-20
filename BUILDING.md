@@ -104,6 +104,7 @@ The `sqlsimtools-macos-arm64-private-preview` Actions artifact contains:
 | `sqlsim-macos-arm64-private-preview.tar.gz` | Complete native CLI overlay, including its macOS preview guide |
 | `sqlpysim-macos-arm64-private-preview.tar.gz` | Complete Python source overlay, including its macOS preview guide |
 | `sqlsimstudio-macos-arm64-private-preview.tar.gz` | Self-contained Studio with both engines and its macOS preview guide |
+| `sqlsimtools-macos-arm64-tester-kit.tar.gz` | Self-contained installation of all tools plus shared offline, smoke, and full suites, fixtures, and a JSON-reporting runner |
 
 The artifact also contains `SHA256SUMS` and `BUILD-INFO.txt`; each archive
 includes the same build receipt. Distribute packages from the same successful
@@ -118,6 +119,14 @@ Studio's offline startup smoke test. This does not validate live SQL
 connectivity, workload execution, Finder launch, signing, or notarization.
 Testers should follow the packaged preview guides and report sanitized results
 in their existing request issues. macOS candidates are not public release assets.
+
+The tester kit extracts into a new folder and does not require a checkout.
+Its [README](release/macos-tester-README.md) documents dependencies, offline
+checks, explicit live/load-test consent, and reports. CI runs the offline tier
+from the extracted kit, not from source-tree paths. Relevant pull requests also
+run the macOS workflow. The long-term live-testing backend is deliberately
+undecided; see [MACOS-SUPPORT-PLAN.md](MACOS-SUPPORT-PLAN.md) for the maintained
+platform plan and promotion gates.
 
 ## Prepare for source testing
 
