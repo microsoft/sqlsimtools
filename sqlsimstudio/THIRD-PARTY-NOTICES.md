@@ -27,5 +27,6 @@ Microsoft.Data.SqlClient and its runtime dependencies are included in self-conta
 
 - Project: https://github.com/microsoft/icu
 - Package: https://www.nuget.org/packages/Microsoft.ICU.ICU4C.Runtime/72.1.0.3
-- Purpose: App-local globalization support for self-contained Linux and macOS packages
+- Purpose: App-local globalization support for Windows and Linux packages.
+  The macOS ARM64 preview uses the operating system's ICU libraries instead.
 - License: Unicode-DFS-2016 and third-party ICU notices distributed with the package

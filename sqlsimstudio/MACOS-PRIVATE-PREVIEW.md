@@ -5,6 +5,11 @@ release. Automated checks cover packaging, engine startup, and Studio's local
 HTTP startup. Live database connections, browser integration, and workload
 execution on testers' Macs still need validation.
 
+The macOS ARM64 build uses macOS's system ICU globalization libraries rather
+than the app-local ICU pinned in Windows and Linux builds. Culture-sensitive
+sorting and comparisons may differ across platforms; include unexpected
+differences in your feedback.
+
 ## Requirements and launch
 
 - Apple Silicon Mac running macOS 15 or later.
