@@ -4,10 +4,24 @@ param(
     [switch]$SkipBuild,
     [switch]$StartupOnly,
     [string]$StudioExecutable,
-    [string]$QueryStoreDatabase
+    [string]$QueryStoreDatabase,
+    [string]$Server = 'localhost',
+    [string]$Database = 'tempdb',
+    [ValidateSet('integrated', 'sql', 'token')]
+    [string]$Authentication = 'integrated',
+    [string]$Username,
+    [string]$SecretFile
 )
 
 $ErrorActionPreference = 'Stop'
+$testSecret = $null
+if (-not $StartupOnly -and $Authentication -ne 'integrated') {
+    if (-not $SecretFile -or ($Authentication -eq 'sql' -and -not $Username)) {
+        throw 'SQL authentication requires Username and SecretFile; token authentication requires SecretFile.'
+    }
+    $testSecret = Get-Content -LiteralPath $SecretFile -TotalCount 1
+    if (-not $testSecret) { throw 'SecretFile must contain a non-empty first line.' }
+}
 $studioRoot = $PSScriptRoot
 $projectPath = Join-Path $studioRoot 'server\SqlsimStudio.csproj'
 $dllPath = Join-Path $studioRoot 'server\bin\Release\net10.0\sqlsimstudio.dll'
@@ -54,6 +68,9 @@ try {
         }
 
         $line = $readTask.Result
+        if ($null -eq $line -and $process.HasExited) {
+            throw "Studio exited with code $($process.ExitCode) before startup: $($process.StandardError.ReadToEnd())"
+        }
         if ($line -like 'SQLSIM_STUDIO_URL=*') {
             $baseUrl = $line.Substring('SQLSIM_STUDIO_URL='.Length)
         } elseif ($line -eq 'SQLSIM_STUDIO_BOOTSTRAP_READY=1') {
@@ -350,11 +367,11 @@ try {
 
         $baseRunPayload = @{
             engine = 'sqlsim'
-            server = 'localhost'
-            database = 'tempdb'
-            authentication = 'integrated'
-            username = $null
-            secret = $null
+            server = $Server
+            database = $Database
+            authentication = $Authentication
+            username = if ($Authentication -eq 'sql') { $Username } else { $null }
+            secret = $testSecret
             threads = 1
             iterations = 1
             quiet = $true
@@ -407,7 +424,7 @@ try {
             -not $connectionTest.serverVersion -or
             -not $connectionTest.edition -or
             -not $connectionTest.driver -or
-            $connectionTest.database -ne 'tempdb' -or
+            $connectionTest.database -ne $Database -or
             $null -eq $connectionTest.elapsedMs) {
             throw "Studio connection test did not report live server details: $($connectionTest | ConvertTo-Json -Depth 6 -Compress)"
         }
@@ -517,9 +534,13 @@ try {
 
         $replayPayload = $baseRunPayload.Clone()
         $replayPayload.mode = 'replay'
-        $replayPayload.database = 'master'
+        $replayPayload.database = $Database
         $replayPayload.inputFileName = 'studio-smoke.xml'
-        $replayPayload.inputContent = Get-Content (Join-Path $studioRoot '..\sqlsim\testing\replay-test-data.xml') -Raw
+        [xml]$replayFixture = Get-Content (Join-Path $studioRoot '..\sqlsim\testing\replay-test-data.xml') -Raw
+        foreach ($recordedDatabase in $replayFixture.SelectNodes('//action[@name="database_name"]/value')) {
+            $recordedDatabase.InnerText = $Database
+        }
+        $replayPayload.inputContent = $replayFixture.OuterXml
         $replayPayload.replayMode = 'fast'
         $replayRun = Invoke-StudioRun -Payload $replayPayload -Name 'Replay'
 

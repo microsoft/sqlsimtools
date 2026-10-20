@@ -10,6 +10,7 @@
 #   bash smoke-test-linux.sh --skip-build --server HOST[,PORT] --database DB \
 #        (--username USER --password-file FILE | --token-file FILE)
 #   bash smoke-test-linux.sh --list-tests
+#   macOS packages: add --skip-build --sqlsim ./arm64/sqlsim
 #
 # Live tests also accept the environment interface used by CI:
 #   SQLSIM_SERVER, SQLSIM_DATABASE, SQLSIM_ACCESS_TOKEN,
@@ -81,6 +82,12 @@ cli_token=""
 while (($# > 0)); do
     case "$1" in
         --skip-build)    skip_build=true; shift ;;
+        --sqlsim)
+            if [[ $# -lt 2 || -z "$2" ]]; then
+                echo "ERROR: --sqlsim requires an executable path." >&2
+                exit 2
+            fi
+            binary="$2"; shift 2 ;;
         --server)        cli_server="$2"; shift 2 ;;
         --database)      cli_database="$2"; shift 2 ;;
         --username)      cli_username="$2"; shift 2 ;;
@@ -110,7 +117,7 @@ if [[ "$skip_build" == false ]]; then
 fi
 
 if [[ ! -x "$binary" ]]; then
-    echo "ERROR: Linux sqlsim binary not found at $binary" >&2
+    echo "ERROR: sqlsim binary not found at $binary" >&2
     exit 1
 fi
 
@@ -208,7 +215,15 @@ fi
 signal_output=""
 signal_status=0
 set +e
-signal_output="$(timeout --preserve-status --signal=INT 1 "$binary" -S 192.0.2.1,1433 -E -l 30 2>&1)"
+timeout_command=timeout
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    timeout_command=gtimeout
+fi
+if ! command -v "$timeout_command" >/dev/null 2>&1; then
+    echo "ERROR: $timeout_command is required for the signal test (macOS: brew install coreutils)." >&2
+    exit 1
+fi
+signal_output="$("$timeout_command" --preserve-status --signal=INT 1 "$binary" -S 192.0.2.1,1433 -E -l 30 2>&1)"
 signal_status=$?
 set -e
 if [[ $signal_status -eq 130 && "$signal_output" == *"Received termination signal"* ]]; then
@@ -223,7 +238,14 @@ fi
 live_tests=0
 live_skipped=0
 if [[ -n "${SQLSIM_SERVER:-}" ]]; then
-    bash "$script_dir/check-prerequisites-linux.sh" --require-driver
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        if ! command -v odbcinst >/dev/null 2>&1 || ! odbcinst -q -d | grep -q 'ODBC Driver 18 for SQL Server'; then
+            echo "ERROR: Microsoft ODBC Driver 18 is required for live macOS tests; see MACOS-PRIVATE-PREVIEW.md." >&2
+            exit 1
+        fi
+    else
+        bash "$script_dir/check-prerequisites-linux.sh" --require-driver
+    fi
 
     server="$SQLSIM_SERVER"
     database="${SQLSIM_DATABASE:-tempdb}"

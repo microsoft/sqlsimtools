@@ -222,7 +222,7 @@ nav#TOC a {
 "@
         
         # Create temp CSS file
-        $tempCssPath = Join-Path $env:TEMP "sqlpysim-style.css"
+        $tempCssPath = Join-Path ([IO.Path]::GetTempPath()) ("sqlpysim-style-{0}.css" -f [guid]::NewGuid().ToString('N'))
         $customCss | Out-File -FilePath $tempCssPath -Encoding utf8
         
         # Python/SQL themed logo SVG (embedded for standalone HTML)

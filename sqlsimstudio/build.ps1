@@ -74,6 +74,9 @@ if ($pandoc) {
     Write-Warning 'pandoc was not found; sqlsimstudio.html was not generated.'
 }
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'CONFIGURATION.md') -Destination $output -Force
+if ($Runtime -eq 'osx-arm64') {
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'MACOS-PRIVATE-PREVIEW.md') -Destination $output -Force
+}
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'examples') -Destination $output -Recurse -Force
 $studioSkillDirectory = Join-Path $output '.github\skills\sqlsimstudio'
 New-Item -ItemType Directory -Path $studioSkillDirectory -Force | Out-Null

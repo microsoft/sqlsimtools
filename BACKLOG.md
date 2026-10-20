@@ -23,6 +23,13 @@ Azure SQL Managed Instance, and SQL database in Microsoft Fabric.
 
 ### Testing and validation
 
+- **Maintain macOS as a tested platform, not just a volunteer preview.**
+  Follow [MACOS-SUPPORT-PLAN.md](MACOS-SUPPORT-PLAN.md): continuously validate
+  extracted packages and the shared tester kit on Apple Silicon; evaluate
+  maintainer-owned live-testing backends before selecting or provisioning one;
+  and complete clean-install, browser, signing/notarization, and release gates
+  before promoting each tool. Tester feedback supplements rather than replaces
+  a repeatable maintainer-owned validation baseline.
 - **Close the sqlpysim workload and live-telemetry gaps.** Agreed as the next
   piece of work, in this order, because the three share plumbing and together
   restore what Studio currently disables for the Python engine:

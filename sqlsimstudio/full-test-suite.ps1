@@ -61,10 +61,23 @@ param(
     [string]$StudioExecutable,
     [switch]$SkipBuild,
     [switch]$OfflineOnly,
-    [switch]$StopOnError
+    [switch]$StopOnError,
+    [ValidateSet('integrated', 'sql', 'token')]
+    [string]$Authentication = 'integrated',
+    [string]$Username,
+    [string]$SecretFile
 )
 
 $ErrorActionPreference = 'Stop'
+$testSecret = $null
+if (-not $OfflineOnly -and $Authentication -ne 'integrated') {
+    if (-not $SecretFile -or ($Authentication -eq 'sql' -and -not $Username)) {
+        throw 'SQL authentication requires Username and SecretFile; token authentication requires SecretFile.'
+    }
+    $testSecret = Get-Content -LiteralPath $SecretFile -TotalCount 1
+    if (-not $testSecret) { throw 'SecretFile must contain a non-empty first line.' }
+}
+$liveAuthentication = $false
 $studioRoot = $PSScriptRoot
 $projectPath = Join-Path $studioRoot 'server\SqlsimStudio.csproj'
 $dllPath = Join-Path $studioRoot 'server\bin\Release\net10.0\sqlsimstudio.dll'
@@ -78,9 +91,19 @@ $settingsDirectory = Join-Path ([IO.Path]::GetTempPath()) ("sqlsimstudio-full-se
 # /api/engines is that sqlsim was not found.
 $sqlsimCandidates = if ($StudioExecutable) {
     $studioDirectory = Split-Path -Parent (Resolve-Path $StudioExecutable).Path
-    @((Join-Path $studioDirectory 'sqlsim\sqlsim.exe'), (Join-Path $studioDirectory '..\sqlsim\x64\sqlsim.exe'))
+    if ($IsWindows) {
+        @((Join-Path $studioDirectory 'sqlsim\sqlsim.exe'), (Join-Path $studioDirectory '..\sqlsim\x64\sqlsim.exe'))
+    } else {
+        @(Join-Path $studioDirectory 'sqlsim/sqlsim')
+    }
 } else {
-    @(Join-Path $studioRoot '..\sqlsim\build\x64\Release\sqlsim.exe')
+    if ($IsWindows) {
+        @(Join-Path $studioRoot '..\sqlsim\build\x64\Release\sqlsim.exe')
+    } elseif ($IsMacOS) {
+        @(Join-Path $studioRoot '../sqlsim/build/macos-arm64/sqlsim')
+    } else {
+        @(Join-Path $studioRoot '../sqlsim/build/linux-x64/sqlsim')
+    }
 }
 $sqlsimExpected = [bool]$env:SQLSIM_STUDIO_SQLSIM_PATH -or [bool]($sqlsimCandidates | Where-Object { Test-Path -LiteralPath $_ })
 
@@ -391,6 +414,8 @@ Test-Case 'Studio survives the machine sleeping' {
 public static extern int NtSuspendProcess(System.IntPtr processHandle);
 [System.Runtime.InteropServices.DllImport("ntdll.dll")]
 public static extern int NtResumeProcess(System.IntPtr processHandle);
+[System.Runtime.InteropServices.DllImport("libc", EntryPoint = "kill", SetLastError = true)]
+public static extern int SendSignal(int processId, int signal);
 '@
     }
 
@@ -403,9 +428,26 @@ public static extern int NtResumeProcess(System.IntPtr processHandle);
         $session = [Microsoft.PowerShell.Commands.WebRequestSession]::new()
         Invoke-WebRequest -Uri $bootstrapUrl -WebSession $session -MaximumRedirection 5 | Out-Null
 
-        $null = [Native.ProcessControl]::NtSuspendProcess($proc.Handle)
+        if ($IsWindows) {
+            $status = [Native.ProcessControl]::NtSuspendProcess($proc.Handle)
+            if ($status -ne 0) { return "suspending Studio failed: $status" }
+        } else {
+            # Darwin and Linux assign different numbers to STOP and CONT.
+            $stopSignal = if ($IsMacOS) { 17 } else { 19 }
+            $continueSignal = if ($IsMacOS) { 19 } else { 18 }
+            if ([Native.ProcessControl]::SendSignal($proc.Id, $stopSignal) -ne 0) {
+                return "SIGSTOP failed: $([Runtime.InteropServices.Marshal]::GetLastPInvokeError())"
+            }
+        }
         Start-Sleep -Seconds 15
-        $null = [Native.ProcessControl]::NtResumeProcess($proc.Handle)
+        if ($IsWindows) {
+            $status = [Native.ProcessControl]::NtResumeProcess($proc.Handle)
+            if ($status -ne 0) { return "resuming Studio failed: $status" }
+        } else {
+            if ([Native.ProcessControl]::SendSignal($proc.Id, $continueSignal) -ne 0) {
+                return "SIGCONT failed: $([Runtime.InteropServices.Marshal]::GetLastPInvokeError())"
+            }
+        }
         Start-Sleep -Seconds 3
 
         if ($proc.HasExited) { return 'Studio exited while the machine was asleep' }
@@ -524,6 +566,15 @@ try {
             trustServerCertificate = $true; stopOnError = $true
             telemetry = 'final'; statisticsSource = 'none'
         }
+        if ($liveAuthentication) {
+            $payload.authentication = $Authentication
+            $payload.username = if ($Authentication -eq 'sql') { $Username } else { $null }
+            $payload.secret = $testSecret
+        }
+        if ($OfflineOnly) {
+            $payload.server = '192.0.2.1,1'
+            $payload.loginTimeoutSeconds = 1
+        }
         foreach ($key in $Overrides.Keys) { $payload[$key] = $Overrides[$key] }
         return $payload
     }
@@ -535,9 +586,26 @@ try {
         if ($response.Status -ne [Net.HttpStatusCode]::BadRequest) {
             return "expected 400, got $($response.Status)"
         }
+
         if (-not $response.Json.error) { return 'rejection carried no error message' }
         if ($ExpectedError -and $response.Json.error -notmatch $ExpectedError) {
             return "expected error matching '$ExpectedError', got '$($response.Json.error)'"
+        }
+        return $null
+    }
+
+    function Stop-ValidationRun {
+        $stop = Invoke-StudioApi -Method 'DELETE' -Path '/api/runs/current'
+        if ($stop.Status -notin [Net.HttpStatusCode]::Accepted, [Net.HttpStatusCode]::NotFound) {
+            return "stopping the validation run returned $($stop.Status)"
+        }
+        $deadline = [DateTime]::UtcNow.AddSeconds(10)
+        do {
+            Start-Sleep -Milliseconds 100
+            $state = (Invoke-StudioApi -Method GET -Path '/api/runs/current').Json.state
+        } while ($state -notin 'completed', 'failed', 'stopped' -and [DateTime]::UtcNow -lt $deadline)
+        if ($state -notin 'completed', 'failed', 'stopped') {
+            return "the validation run did not stop: $state"
         }
         return $null
     }
@@ -772,16 +840,10 @@ try {
         $groups = @(@{ fileName = 'g.sql'; content = 'SELECT 1'; threads = 1; iterations = 1; thinkTimeMs = 0 })
         $response = Invoke-StudioApi -Payload (New-RunPayload @{
             engine = 'sqlpysim'; mode = 'workload'; query = $null; workloadGroups = $groups })
-        if ($response.Status -eq [Net.HttpStatusCode]::BadRequest) {
+        if ($response.Status -ne [Net.HttpStatusCode]::Accepted) {
             return "mixed workload was rejected for sqlpysim: $($response.Json.error)"
         }
-        # Leave nothing running: a live run would refuse the next request.
-        $deadline = [DateTime]::UtcNow.AddSeconds(30)
-        do {
-            Start-Sleep -Milliseconds 200
-            $state = (Invoke-StudioApi -Method GET -Path '/api/runs/current').Json.state
-        } while ($state -notin 'completed', 'failed', 'stopped' -and [DateTime]::UtcNow -lt $deadline)
-        return $null
+        return Stop-ValidationRun
     }
 
     Test-Case 'sqlpysim with replay is rejected' {
@@ -867,18 +929,10 @@ try {
         $response = Invoke-StudioApi -Payload (New-RunPayload @{
             engine = 'sqlpysim'; authentication = 'service-principal';
             username = 'client-id'; secret = 'not-a-real-secret' })
-        if ($response.Status -eq [Net.HttpStatusCode]::BadRequest) {
+        if ($response.Status -ne [Net.HttpStatusCode]::Accepted) {
             return "service principal was rejected for sqlpysim: $($response.Json.error)"
         }
-        $deadline = [DateTime]::UtcNow.AddSeconds(30)
-        do {
-            Start-Sleep -Milliseconds 200
-            $run = (Invoke-StudioApi -Method GET -Path '/api/runs/current').Json
-        } while ($run.state -notin 'completed', 'failed', 'stopped' -and [DateTime]::UtcNow -lt $deadline)
-        if ($run.state -notin 'completed', 'failed') {
-            return "expected the authentication attempt to finish, got '$($run.state)'"
-        }
-        return $null
+        return Stop-ValidationRun
     }
 
     Test-Case 'an application name does not reach sqlpysim' -RequiresServer {
@@ -1057,6 +1111,7 @@ try {
     # -----------------------------------------------------------------------
 
     if (-not $OfflineOnly) {
+        $liveAuthentication = $true
         Write-Section '9. Connection failure reporting'
 
         Test-Case 'connection test to an unreachable port reports a specific failure' {

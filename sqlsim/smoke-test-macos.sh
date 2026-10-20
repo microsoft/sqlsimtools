@@ -6,15 +6,23 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 binary="$script_dir/build/macos-arm64/sqlsim"
 skip_build=false
 
-if [[ "${1:-}" == "--skip-build" ]]; then
-    skip_build=true
-    shift
-fi
-
-if (($# > 0)); then
-    echo "Usage: bash smoke-test-macos.sh [--skip-build]" >&2
-    exit 2
-fi
+while (($# > 0)); do
+    case "$1" in
+        --skip-build) skip_build=true; shift ;;
+        --sqlsim)
+            if [[ $# -lt 2 || -z "$2" ]]; then
+                echo "ERROR: --sqlsim requires an executable path." >&2
+                exit 2
+            fi
+            binary="$2"; shift 2 ;;
+        -h|--help)
+            echo "Usage: bash smoke-test-macos.sh [--skip-build] [--sqlsim PATH]"
+            exit 0 ;;
+        *)
+            echo "Usage: bash smoke-test-macos.sh [--skip-build] [--sqlsim PATH]" >&2
+            exit 2 ;;
+    esac
+done
 
 if [[ "$skip_build" == false ]]; then
     bash "$script_dir/build-macos.sh"

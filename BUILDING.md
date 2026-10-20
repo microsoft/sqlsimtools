@@ -86,6 +86,48 @@ Studio builds are self-contained and include the matching native sqlsim binary.
 See [sqlsimstudio/README.md](sqlsimstudio/README.md) for the supported platform
 matrix and package contents.
 
+### macOS ARM64 Private Preview candidates
+
+The [macOS preview workflow](.github/workflows/sqlsim-macos-arm64-private-preview.yml)
+builds all three tools on a macOS 15 Apple Silicon runner using their existing
+build and publish scripts. To build an invited-tester candidate without
+creating a tag or public release:
+
+```powershell
+gh workflow run sqlsim-macos-arm64-private-preview.yml --repo microsoft/sqlsimtools --ref main
+```
+
+The `sqlsimtools-macos-arm64-private-preview` Actions artifact contains:
+
+| Archive | Intended use |
+| --- | --- |
+| `sqlsim-macos-arm64-private-preview.tar.gz` | Complete native CLI overlay, including its macOS preview guide |
+| `sqlpysim-macos-arm64-private-preview.tar.gz` | Complete Python source overlay, including its macOS preview guide |
+| `sqlsimstudio-macos-arm64-private-preview.tar.gz` | Self-contained Studio with both engines and its macOS preview guide |
+| `sqlsimtools-macos-arm64-tester-kit.tar.gz` | Self-contained installation of all tools plus shared offline, smoke, and full suites, fixtures, and a JSON-reporting runner |
+
+The artifact also contains `SHA256SUMS` and `BUILD-INFO.txt`; each archive
+includes the same build receipt. Distribute packages from the same successful
+run to the invited cohort. Downloading Actions artifacts requires signing in
+to GitHub, and the artifacts expire according to repository retention settings.
+Private Preview describes support status, not access control: artifacts in
+this public repository are not confidential.
+
+The workflow extracts each archive before validation, runs CLI help/version
+and layout checks, verifies Studio and its native engine are ARM64, and runs
+Studio's offline startup smoke test. This does not validate live SQL
+connectivity, workload execution, Finder launch, signing, or notarization.
+Testers should follow the packaged preview guides and report sanitized results
+in their existing request issues. macOS candidates are not public release assets.
+
+The tester kit extracts into a new folder and does not require a checkout.
+Its [README](release/macos-tester-README.md) documents dependencies, offline
+checks, explicit live/load-test consent, and reports. CI runs the offline tier
+from the extracted kit, not from source-tree paths. Relevant pull requests also
+run the macOS workflow. The long-term live-testing backend is deliberately
+undecided; see [MACOS-SUPPORT-PLAN.md](MACOS-SUPPORT-PLAN.md) for the maintained
+platform plan and promotion gates.
+
 ## Prepare for source testing
 
 After building sqlsim and preparing sqlpysim, run the shared test preflight

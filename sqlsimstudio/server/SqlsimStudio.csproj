@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <RuntimeHostConfigurationOption Include="System.Globalization.AppLocalIcu" Value="72.1.0.3" />
+    <RuntimeHostConfigurationOption Include="System.Globalization.AppLocalIcu" Value="72.1.0.3" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'" />
     <EmbeddedResource Include="..\client\index.html" LogicalName="SqlsimStudio.Assets.index.html" />
     <EmbeddedResource Include="..\client\styles.css" LogicalName="SqlsimStudio.Assets.styles.css" />
     <EmbeddedResource Include="..\client\app.js" LogicalName="SqlsimStudio.Assets.app.js" />
@@ -27,7 +27,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" />
+    <PackageReference Include="Microsoft.ICU.ICU4C.Runtime" Version="72.1.0.3" Condition="'$(RuntimeIdentifier)' != 'osx-arm64'" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.0" />
   </ItemGroup>
 </Project>
