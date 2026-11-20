@@ -194,7 +194,6 @@ is out of scope.
 | `Agent Plugins CI` | `.github/workflows/plugin-ci.yml` | PR and push to `main` touching skills, plugins, or marketplace files; also `workflow_dispatch` |
 | `sqlsim macOS ARM64 Private Preview` | `.github/workflows/sqlsim-macos-arm64-private-preview.yml` | Push to `main` touching `sqlsim/**` or `release/**`; also `workflow_dispatch` |
 | `Driver update monitor` | `.github/workflows/driver-update-monitor.yml` | Weekly on Monday (`cron`); also `workflow_dispatch` |
-| `External PR policy` | `.github/workflows/external-pr-policy.yml` | `pull_request_target`; redirects external PRs to issues |
 | `Release` | `.github/workflows/release.yml` | Tag push `v*.*.*`; also `workflow_dispatch` |
 
 CodeQL runs through GitHub's default code-scanning setup rather than a
