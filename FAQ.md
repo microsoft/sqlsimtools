@@ -195,8 +195,8 @@ It does not reproduce Distributed Replay's multi-machine controller model.
 ### Can I contribute code?
 
 Not yet. During Public Preview the project accepts issues but not external pull
-requests, while interfaces, packaging, and tests stabilize. Pull requests from
-outside the maintainer team are closed automatically with a pointer to Issues.
+requests, while interfaces, packaging, and tests stabilize. Maintainers handle
+external pull requests manually and redirect contributors to Issues.
 Bugs, feature requests, and documentation problems are welcome as
 [issues](https://github.com/microsoft/sqlsimtools/issues/new/choose), and
 questions and ideas in
