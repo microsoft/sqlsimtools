@@ -192,6 +192,7 @@ is out of scope.
 | `sqlpysim CI` | `.github/workflows/sqlpysim-ci.yml` | PR and push to `main` touching `sqlpysim/**`; also `workflow_dispatch` |
 | `sqlsim Studio CI` | `.github/workflows/sqlsimstudio-ci.yml` | PR and push to `main` touching `sqlsimstudio/**` or the Studio skill; also `workflow_dispatch` |
 | `Agent Plugins CI` | `.github/workflows/plugin-ci.yml` | PR and push to `main` touching skills, plugins, or marketplace files; also `workflow_dispatch` |
+| `On-demand live validation` | `.github/workflows/live-validation.yml` | `workflow_dispatch`; currently Ubuntu x64 sqlsim and sqlpysim suites against SQL Server 2025 |
 | `sqlsim macOS ARM64 Private Preview` | `.github/workflows/sqlsim-macos-arm64-private-preview.yml` | Push to `main` touching `sqlsim/**` or `release/**`; also `workflow_dispatch` |
 | `Driver update monitor` | `.github/workflows/driver-update-monitor.yml` | Weekly on Monday (`cron`); also `workflow_dispatch` |
 | `Release` | `.github/workflows/release.yml` | Tag push `v*.*.*`; also `workflow_dispatch` |
@@ -199,14 +200,13 @@ is out of scope.
 CodeQL runs through GitHub's default code-scanning setup rather than a
 workflow file.
 
-None of these workflows touches SQL Server: hosted runners have no live
-target, so CI builds the tools and runs offline checks (help and version
+The CI workflows build the tools and run offline checks (help and version
 output, unit tests, PSScriptAnalyzer, report tests, overlay-install tests,
-Studio startup and browser layout tests). Live testing remains manual via each
-tool's `smoke-test.ps1` / `full-test-suite.ps1`. The driver update monitor
-checks for new ODBC Driver 18 and `mssql-python` releases, runs offline smoke
-tests against them, and files an issue; the live validation it calls for is
-manual.
+Studio startup and browser layout tests). The on-demand live-validation
+workflow adds Ubuntu x64 sqlsim and sqlpysim coverage against SQL Server 2025;
+other platforms and SQL targets remain manual until their rollout steps land.
+The driver update monitor checks for new ODBC Driver 18 and `mssql-python`
+releases, runs offline smoke tests against them, and files an issue.
 
 ## Reviewing incoming PRs (maintainer workflow)
 

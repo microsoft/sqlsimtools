@@ -210,6 +210,31 @@ It requires Ubuntu 24.04 or 26.04 x64, `build-essential`, CMake,
 `unixodbc-dev`, and Microsoft ODBC Driver 18. The preflight reports the
 repository-supported `apt-get` command when build packages are missing.
 
+## Run on-demand live validation
+
+The `On-demand live validation` workflow can test the Ubuntu x64 sqlsim and
+sqlpysim suites against a fresh SQL Server 2025 Developer container. It runs
+only when dispatched, creates a per-run SQL password, and uploads suite logs
+and a summary. The full sqlsim suite includes its 1024-thread scale tests.
+
+After the workflow is available on `main`, start a full run against a branch,
+tag, or commit:
+
+```powershell
+gh workflow run live-validation.yml --repo microsoft/sqlsimtools --ref main `
+    -f platform=ubuntu-x64 -f tool=all -f suite=full -f ref=1.1.0
+gh run list --repo microsoft/sqlsimtools --workflow live-validation.yml `
+    --event workflow_dispatch --branch main --limit 5
+gh run watch <run-id> --repo microsoft/sqlsimtools --exit-status
+```
+
+Use `-f suite=smoke` for the smoke suites, or set `-f tool=sqlsim` /
+`-f tool=sqlpysim` to select one tool. `--ref main` selects the workflow
+definition; the `ref` input selects the source to build and test. See the
+[`sqlsimtools-live-test` skill](.github/skills/sqlsimtools-live-test/SKILL.md)
+for run monitoring, artifact download, and reporting instructions. Other
+platforms and SQL targets will be added in later rollout steps.
+
 ## Install a source build into a project
 
 To build sqlsim from this checkout and install it, with its manual, examples,

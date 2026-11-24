@@ -1,0 +1,292 @@
+name: On-demand live validation
+
+# Temporary push trigger for testing this feature branch. Remove before merging;
+# the supported workflow is on-demand only.
+on:
+  push:
+    branches: [feat/live-validation]
+  workflow_dispatch:
+    inputs:
+      platform:
+        description: Client platform to test
+        type: choice
+        required: true
+        default: ubuntu-x64
+        options:
+          - ubuntu-x64
+      tool:
+        description: Tool to test
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - sqlsim
+          - sqlpysim
+      suite:
+        description: Test suite to run
+        type: choice
+        required: true
+        default: full
+        options:
+          - smoke
+          - full
+      ref:
+        description: Branch, tag, or commit to test
+        type: string
+        required: true
+        default: '1.1.0'
+
+permissions:
+  contents: read
+
+env:
+  SQLSERVER_IMAGE: mcr.microsoft.com/mssql/server:2025-CU11-ubuntu-24.04
+
+jobs:
+  live-validation:
+    name: Ubuntu x64 / SQL Server 2025
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Check out requested source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Select tests
+        id: selection
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_PLATFORM: ${{ inputs.platform }}
+          INPUT_TOOL: ${{ inputs.tool }}
+          INPUT_SUITE: ${{ inputs.suite }}
+          INPUT_REF: ${{ inputs.ref }}
+        run: |
+          if [[ "$EVENT_NAME" == "push" ]]; then
+            platform=ubuntu-x64
+            tool=all
+            suite=full
+            requested_ref="$GITHUB_SHA"
+          else
+            platform="$INPUT_PLATFORM"
+            tool="$INPUT_TOOL"
+            suite="$INPUT_SUITE"
+            requested_ref="$INPUT_REF"
+          fi
+
+          if [[ -z "$requested_ref" || "$requested_ref" == *$'\n'* || "$requested_ref" == *$'\r'* ]]; then
+            echo "::error::The requested ref must be a non-empty single line."
+            exit 1
+          fi
+          if [[ "$platform" != "ubuntu-x64" ]]; then
+            echo "::error::Unsupported platform: $platform"
+            exit 1
+          fi
+          if [[ "$tool" != "all" && "$tool" != "sqlsim" && "$tool" != "sqlpysim" ]]; then
+            echo "::error::Unsupported tool: $tool"
+            exit 1
+          fi
+          if [[ "$suite" != "smoke" && "$suite" != "full" ]]; then
+            echo "::error::Unsupported suite: $suite"
+            exit 1
+          fi
+
+          {
+            echo "platform=$platform"
+            echo "tool=$tool"
+            echo "suite=$suite"
+            echo "requested_ref=$requested_ref"
+          } >> "$GITHUB_OUTPUT"
+          mkdir -p "$RUNNER_TEMP/live-test-logs"
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: '3.11'
+
+      - name: Install sqlsim build and ODBC prerequisites
+        working-directory: sqlsim
+        run: |
+          ubuntu_version="$(. /etc/os-release && printf '%s' "$VERSION_ID")"
+          curl -fsSLo "$RUNNER_TEMP/packages-microsoft-prod.deb" \
+            "https://packages.microsoft.com/config/ubuntu/$ubuntu_version/packages-microsoft-prod.deb"
+          sudo dpkg -i "$RUNNER_TEMP/packages-microsoft-prod.deb"
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y \
+            msodbcsql18 unixodbc-dev build-essential cmake jq
+
+      - name: Build sqlsim
+        working-directory: sqlsim
+        run: bash ./build-linux.sh --clean
+
+      - name: Install sqlpysim dependencies
+        working-directory: sqlpysim
+        run: python -m pip install -r requirements.txt
+
+      - name: Generate transient SQL credentials
+        run: |
+          password="$(python3 -c 'import secrets; print(secrets.token_urlsafe(27) + "aA1!")')"
+          password_file="$RUNNER_TEMP/sqlserver-password"
+          umask 077
+          printf '%s\n' "$password" > "$password_file"
+          chmod 600 "$password_file"
+          echo "::add-mask::$password"
+          {
+            printf 'MSSQL_SA_PASSWORD=%s\n' "$password"
+            printf 'SQLSERVER_PASSWORD_FILE=%s\n' "$password_file"
+          } >> "$GITHUB_ENV"
+          unset password
+
+      - name: Start SQL Server 2025 container
+        run: |
+          docker run \
+            --name sqlsim-live-validation \
+            --env ACCEPT_EULA=Y \
+            --env MSSQL_PID=Developer \
+            --env "MSSQL_SA_PASSWORD=$MSSQL_SA_PASSWORD" \
+            --publish 127.0.0.1:1433:1433 \
+            --detach "$SQLSERVER_IMAGE"
+
+      - name: Wait for SQL Server and create test database
+        run: |
+          sqlsim="$GITHUB_WORKSPACE/sqlsim/build/linux-x64/sqlsim"
+          ready=false
+
+          for attempt in $(seq 1 60); do
+            if "$sqlsim" -S 127.0.0.1,1433 -d master -U sa -P - -C -l 2 \
+              -Q "SELECT @@VERSION" \
+              < "$SQLSERVER_PASSWORD_FILE" \
+              > "$RUNNER_TEMP/live-test-logs/sqlserver-version.log" \
+              2> "$RUNNER_TEMP/live-test-logs/sqlserver-startup.err"; then
+              ready=true
+              break
+            fi
+            sleep 3
+          done
+
+          if [[ "$ready" != true ]]; then
+            echo "::error::SQL Server did not become ready within five minutes."
+            docker logs sqlsim-live-validation
+            exit 1
+          fi
+
+          "$sqlsim" -S 127.0.0.1,1433 -d master -U sa -P - -C -l 10 \
+            -Q "CREATE DATABASE sqlsim_live" -q \
+            < "$SQLSERVER_PASSWORD_FILE"
+          cat "$RUNNER_TEMP/live-test-logs/sqlserver-version.log"
+
+      - name: Run sqlsim smoke suite
+        if: steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlsim'
+        working-directory: sqlsim
+        run: |
+          set -o pipefail
+          bash ./smoke-test-linux.sh --skip-build \
+            --server 127.0.0.1,1433 --database sqlsim_live \
+            --username sa --password-file "$SQLSERVER_PASSWORD_FILE" \
+            2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlsim-smoke.log"
+
+      - name: Run sqlsim full suite
+        if: (steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlsim') && steps.selection.outputs.suite == 'full'
+        working-directory: sqlsim
+        timeout-minutes: 40
+        run: |
+          set -o pipefail
+          bash ./full-test-suite-linux.sh \
+            --server 127.0.0.1,1433 --database sqlsim_live \
+            --username sa --password-file "$SQLSERVER_PASSWORD_FILE" \
+            2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlsim-full.log"
+
+      - name: Run sqlpysim smoke suite
+        if: steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlpysim'
+        working-directory: sqlpysim
+        run: |
+          set -o pipefail
+          bash ./smoke-test-linux.sh --skip-install \
+            --server 127.0.0.1,1433 --database sqlsim_live \
+            --username sa --password-file "$SQLSERVER_PASSWORD_FILE" \
+            2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlpysim-smoke.log"
+
+      - name: Run sqlpysim full suite
+        if: (steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlpysim') && steps.selection.outputs.suite == 'full'
+        working-directory: sqlpysim
+        timeout-minutes: 40
+        run: |
+          set -o pipefail
+          bash ./full-test-suite-linux.sh --skip-install \
+            --server 127.0.0.1,1433 --database sqlsim_live \
+            --username sa --password-file "$SQLSERVER_PASSWORD_FILE" \
+            2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlpysim-full.log"
+
+      - name: Write run summary
+        if: always()
+        env:
+          TESTED_COMMIT: ${{ github.sha }}
+          SELECTED_PLATFORM: ${{ steps.selection.outputs.platform }}
+          SELECTED_TOOL: ${{ steps.selection.outputs.tool }}
+          SELECTED_SUITE: ${{ steps.selection.outputs.suite }}
+          REQUESTED_REF: ${{ steps.selection.outputs.requested_ref }}
+        run: |
+          {
+            echo "## On-demand live validation"
+            echo
+            echo "- Platform: $SELECTED_PLATFORM"
+            echo "- Tool: $SELECTED_TOOL"
+            echo "- Suite: $SELECTED_SUITE"
+            echo "- Requested ref: $REQUESTED_REF"
+            echo "- Workflow commit: $TESTED_COMMIT"
+            echo "- Tested source commit: $(git rev-parse HEAD)"
+            echo "- SQL Server image: $SQLSERVER_IMAGE"
+            echo "- sqlsim: $(sqlsim/build/linux-x64/sqlsim --version)"
+            echo "- ODBC: $(odbcinst -q -d -n 'ODBC Driver 18 for SQL Server' | tr '\n' ' ')"
+            echo "- mssql-python: $(python -c 'import importlib.metadata as m; print(m.version("mssql-python"))')"
+            echo
+            echo "### Suite totals"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          for log in "$RUNNER_TEMP"/live-test-logs/*-smoke.log "$RUNNER_TEMP"/live-test-logs/*-full.log; do
+            [[ -f "$log" ]] || continue
+            echo
+            echo "#### $(basename "$log")"
+            if ! grep -E '^(Linux smoke test:|Total Tests:|Passed[[:space:]]*:|Failed[[:space:]]*:|Skipped[[:space:]]*:|Total[[:space:]]*:|Duration:)' "$log" \
+              | tail -n 8 >> "$GITHUB_STEP_SUMMARY"; then
+              echo "No suite totals were captured." >> "$GITHUB_STEP_SUMMARY"
+            fi
+          done
+
+          if [[ -f "$RUNNER_TEMP/live-test-logs/sqlserver-version.log" ]]; then
+            {
+              echo
+              echo "### SQL Server version"
+              echo '```text'
+              cat "$RUNNER_TEMP/live-test-logs/sqlserver-version.log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Capture SQL Server logs
+        if: always()
+        run: |
+          if docker container inspect sqlsim-live-validation >/dev/null 2>&1; then
+            docker logs sqlsim-live-validation \
+              > "$RUNNER_TEMP/live-test-logs/sqlserver-container.log" 2>&1
+          fi
+
+      - name: Upload test logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: live-validation-logs
+          path: ${{ runner.temp }}/live-test-logs/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Remove container and credentials
+        if: always()
+        run: |
+          if docker container inspect sqlsim-live-validation >/dev/null 2>&1; then
+            docker rm --force sqlsim-live-validation
+          fi
+          if [[ -n "${SQLSERVER_PASSWORD_FILE:-}" ]]; then
+            rm -f "$SQLSERVER_PASSWORD_FILE"
+          fi
