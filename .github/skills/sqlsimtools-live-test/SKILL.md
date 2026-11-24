@@ -17,7 +17,10 @@ It can run `sqlsim`, `sqlpysim`, or both. The full sqlsim suite includes both
 thread-scaling throughput gate because shared hosted-runner CPU variability
 made that measurement unstable; the suite reports it as skipped, not passed.
 Run the local smoke suite without `-SkipThreadScaling` to exercise that gate.
-The workflow currently has no Azure dependency or repository secrets.
+The 1024-thread full-suite tests currently exceed the connection capacity of
+the co-located SQL Server container on a standard hosted runner; their failures
+remain visible, while other selected suites continue to run. The workflow
+currently has no Azure dependency or repository secrets.
 
 ## Run a test
 

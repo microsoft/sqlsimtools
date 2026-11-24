@@ -149,6 +149,7 @@ jobs:
             --detach "$SQLSERVER_IMAGE"
 
       - name: Wait for SQL Server and create test database
+        id: sqlserver-ready
         run: |
           sqlsim="$GITHUB_WORKSPACE/sqlsim/build/linux-x64/sqlsim"
           ready=false
@@ -188,7 +189,7 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlsim-smoke.log"
 
       - name: Run sqlsim full suite
-        if: (steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlsim') && steps.selection.outputs.suite == 'full'
+        if: "!cancelled() && steps.sqlserver-ready.outcome == 'success' && (steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlsim') && steps.selection.outputs.suite == 'full'"
         working-directory: sqlsim
         timeout-minutes: 40
         run: |
@@ -200,7 +201,7 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlsim-full.log"
 
       - name: Run sqlpysim smoke suite
-        if: steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlpysim'
+        if: "!cancelled() && steps.sqlserver-ready.outcome == 'success' && (steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlpysim')"
         working-directory: sqlpysim
         run: |
           set -o pipefail
@@ -210,7 +211,7 @@ jobs:
             2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlpysim-smoke.log"
 
       - name: Run sqlpysim full suite
-        if: (steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlpysim') && steps.selection.outputs.suite == 'full'
+        if: "!cancelled() && steps.sqlserver-ready.outcome == 'success' && (steps.selection.outputs.tool == 'all' || steps.selection.outputs.tool == 'sqlpysim') && steps.selection.outputs.suite == 'full'"
         working-directory: sqlpysim
         timeout-minutes: 40
         run: |
