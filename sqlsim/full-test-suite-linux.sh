@@ -354,7 +354,13 @@ test_cmd() {
   if [ "$should_fail" -eq 1 ]; then
     [ "$rc" -eq 0 ] && { _fail "expected non-zero exit code but got 0"; return; }
   else
-    [ "$rc" -ne 0 ] && { _fail "exit code $rc"; return; }
+    if [ "$rc" -ne 0 ]; then
+      local details
+      details="$(printf '%s\n' "$out" | tail -n 30)"
+      _fail "exit code $rc; last output lines:
+$details"
+      return
+    fi
   fi
   if [ -n "$expect" ] && ! grep -qiE "$expect" <<<"$out"; then
     _fail "output didn't contain expected: $expect"; return
