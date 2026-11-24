@@ -192,6 +192,10 @@ bash ./smoke-test-linux.sh --skip-build --server HOST[,PORT] --database DB \
 bash ./full-test-suite-linux.sh --server HOST[,PORT] --database DB \
   --username USER --password-file FILE
 
+# Allow longer logins for the 1024-thread scale tests on slower targets
+bash ./full-test-suite-linux.sh --server HOST --database DB \
+  --username USER --password-file FILE --login-timeout 180
+
 # Or with a Microsoft Entra access token (Azure SQL)
 az account get-access-token --resource https://database.windows.net \
   --query accessToken -o tsv > ~/.sqltoken && chmod 600 ~/.sqltoken
@@ -207,6 +211,10 @@ Notes:
   process list; `--token` and `--password` still put it on the suite's own
   command line, so prefer the file options.
 - The full suite needs `jq` (`sudo apt-get install -y jq`).
+- `--login-timeout` controls the 1024-thread scale tests in the Linux sqlsim
+  full suite. Increase it for targets that take longer to accept a connection
+  storm; it defaults to 60 seconds, matching `-LoginTimeout` in the
+  PowerShell suite.
 - The target database needs no sample schema. The login must be able to create
   and drop `dbo.sqlsim_test_proc` in `tempdb` (SQL Server) or in the target
   database (Azure SQL Database), and to read its own session from the DMVs.

@@ -195,6 +195,7 @@ jobs:
           bash ./full-test-suite-linux.sh \
             --server 127.0.0.1,1433 --database sqlsim_live \
             --username sa --password-file "$SQLSERVER_PASSWORD_FILE" \
+            --login-timeout 180 \
             2>&1 | tee "$RUNNER_TEMP/live-test-logs/sqlsim-full.log"
 
       - name: Run sqlpysim smoke suite
@@ -237,6 +238,7 @@ jobs:
             echo "- Workflow commit: $TESTED_COMMIT"
             echo "- Tested source commit: $(git rev-parse HEAD)"
             echo "- SQL Server image: $SQLSERVER_IMAGE"
+            echo "- 1024-thread sqlsim login timeout: 180 seconds"
             echo "- sqlsim: $(sqlsim/build/linux-x64/sqlsim --version)"
             echo "- ODBC: $(odbcinst -q -d -n 'ODBC Driver 18 for SQL Server' | tr '\n' ' ')"
             echo "- mssql-python: $(python -c 'import importlib.metadata as m; print(m.version("mssql-python"))')"

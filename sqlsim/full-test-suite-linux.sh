@@ -8,7 +8,8 @@
 # Usage:
 #   ./full-test-suite-linux.sh [--server HOST] [--database DB] \
 #       (--username USER --password-file FILE | --token-file FILE)
-#       [--sqlsim PATH] [--skip-scale] [--stop-on-error]
+#       [--sqlsim PATH] [--skip-scale] [--login-timeout SECONDS]
+#       [--stop-on-error]
 #   ./full-test-suite-linux.sh --list-tests
 #
 # Options:
@@ -16,6 +17,7 @@
 #                         prefer the -file forms)
 #   --sqlsim PATH         sqlsim binary (default: build/linux-x64/sqlsim)
 #   --skip-scale          Skip the 1024-thread tests on constrained targets
+#   --login-timeout SEC   Login timeout for the 1024-thread tests (default: 60)
 #   --stop-on-error       Stop at the first failing test
 #   --list-tests          Print the test inventory and exit
 #
@@ -34,6 +36,7 @@ TOKEN=""
 SQLSIM=""
 SKIP_SCALE=0
 STOP_ON_ERROR=0
+LOGIN_TIMEOUT=60
 
 # Implemented tests only. Extend as each group is ported.
 TEST_NAMES=(
@@ -259,12 +262,18 @@ while [ $# -gt 0 ]; do
     --token-file)    TOKEN="$(head -n 1 -- "$2" | tr -d '\r')"; shift 2 ;;
     --sqlsim)        SQLSIM="$2"; shift 2 ;;
     --skip-scale)    SKIP_SCALE=1; shift ;;
+    --login-timeout) LOGIN_TIMEOUT="$2"; shift 2 ;;
     --stop-on-error) STOP_ON_ERROR=1; shift ;;
     --list-tests)    printf '%s\n' "${TEST_NAMES[@]}"; exit 0 ;;
     -h|--help)       usage; exit 0 ;;
     *) echo "Unknown option: $1" >&2; usage >&2; exit 2 ;;
   esac
 done
+
+if [[ ! "$LOGIN_TIMEOUT" =~ ^[1-9][0-9]*$ ]]; then
+  echo "ERROR: --login-timeout must be a positive number of seconds" >&2
+  exit 2
+fi
 
 [ -n "$SQLSIM" ] || SQLSIM="$SCRIPT_DIR/build/linux-x64/sqlsim"
 if [ ! -x "$SQLSIM" ]; then
@@ -548,9 +557,9 @@ if [ "$SKIP_SCALE" -eq 1 ]; then
   echo "${YELLOW}TEST: Higher Thread Count with Prepared Statements (1024)${RESET}"; _skip "--skip-scale specified"
 else
   test_cmd "Higher Thread Count (1024)" "Verify higher thread counts work correctly" 0 "Total Runtime:" -- \
-    "${BASE[@]}" "${AUTH[@]}" -Q "SELECT 1" -n 1024 -r 2 -l 60 -v
+    "${BASE[@]}" "${AUTH[@]}" -Q "SELECT 1" -n 1024 -r 2 -l "$LOGIN_TIMEOUT" -v
   test_cmd "Higher Thread Count with Prepared Statements (1024)" "Verify prepared statements work with very high thread counts" 0 "Total Runtime:" -- \
-    "${BASE[@]}" "${AUTH[@]}" -Q "SELECT 1" -p -n 1024 -r 1 -l 60 -v
+    "${BASE[@]}" "${AUTH[@]}" -Q "SELECT 1" -p -n 1024 -r 1 -l "$LOGIN_TIMEOUT" -v
 fi
 
 test_cmd "Threads with Query Timeout" "Verify -t works with multiple threads" 0 "Total Runtime:" -- \
