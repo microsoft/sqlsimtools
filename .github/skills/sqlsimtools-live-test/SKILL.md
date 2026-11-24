@@ -13,8 +13,11 @@ totals, and log artifact.
 
 Step 1 supports Ubuntu x64 against a fresh SQL Server 2025 Developer container.
 It can run `sqlsim`, `sqlpysim`, or both. The full sqlsim suite includes both
-1024-thread scale tests. The workflow currently has no Azure dependency or
-repository secrets.
+1024-thread scale tests. Its sqlsim smoke run explicitly skips the P2
+thread-scaling throughput gate because shared hosted-runner CPU variability
+made that measurement unstable; the suite reports it as skipped, not passed.
+Run the local smoke suite without `-SkipThreadScaling` to exercise that gate.
+The workflow currently has no Azure dependency or repository secrets.
 
 ## Run a test
 

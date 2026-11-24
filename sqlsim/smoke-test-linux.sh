@@ -8,9 +8,12 @@
 # Usage:
 #   bash smoke-test-linux.sh [--skip-build]
 #   bash smoke-test-linux.sh --skip-build --server HOST[,PORT] --database DB \
-#        (--username USER --password-file FILE | --token-file FILE)
+#        (--username USER --password-file FILE | --token-file FILE) \
+#        [--skip-thread-scaling]
 #   bash smoke-test-linux.sh --list-tests
 #   macOS packages: add --skip-build --sqlsim ./arm64/sqlsim
+#
+#   --skip-thread-scaling  Skip the P2 throughput gate on shared runners
 #
 # Live tests also accept the environment interface used by CI:
 #   SQLSIM_SERVER, SQLSIM_DATABASE, SQLSIM_ACCESS_TOKEN,
@@ -21,6 +24,7 @@ set -euo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 binary="$script_dir/build/linux-x64/sqlsim"
 skip_build=false
+skip_thread_scaling=false
 
 # Live-test inventory. Keep in step with smoke-test.ps1.
 TEST_NAMES=(
@@ -82,6 +86,7 @@ cli_token=""
 while (($# > 0)); do
     case "$1" in
         --skip-build)    skip_build=true; shift ;;
+        --skip-thread-scaling) skip_thread_scaling=true; shift ;;
         --sqlsim)
             if [[ $# -lt 2 || -z "$2" ]]; then
                 echo "ERROR: --sqlsim requires an executable path." >&2
@@ -98,7 +103,7 @@ while (($# > 0)); do
         --list-tests)    printf '%s\n' "${TEST_NAMES[@]}"; exit 0 ;;
         -h|--help)       sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *)
-            echo "Usage: bash smoke-test-linux.sh [--skip-build] [--server HOST] [--database DB] [--username USER --password-file FILE | --token-file FILE]" >&2
+            echo "Usage: bash smoke-test-linux.sh [--skip-build] [--skip-thread-scaling] [--server HOST] [--database DB] [--username USER --password-file FILE | --token-file FILE]" >&2
             echo "Optional live-test environment: SQLSIM_SERVER, SQLSIM_DATABASE, and either SQLSIM_ACCESS_TOKEN or SQLSIM_USERNAME plus SQLSIM_PASSWORD." >&2
             exit 2
             ;;
@@ -629,21 +634,25 @@ PY
         live_fail "sqlsim per-iteration overhead (P1)" "sqlsim invocation failed"
     fi
 
-    t_n1="$(perf_run -n 1 -r 5000)"
-    t_n4="$(perf_run -n 4 -r 5000)"
-    cpu_count="$(nproc 2>/dev/null || echo 1)"
-    if [[ "$cpu_count" -lt 4 ]]; then
-        # The 2.0x floor assumes at least 4 logical CPUs; fewer cores cap scaling.
-        live_skip "sqlsim thread scaling (P2)" "needs >= 4 logical CPUs, host has $cpu_count"
-    elif [[ -n "$t_n1" && -n "$t_n4" ]]; then
-        scale="$(awk -v a="$t_n1" -v b="$t_n4" 'BEGIN{printf "%.2f", (4.0*a)/b}')"
-        if awk -v s="$scale" 'BEGIN{exit !(s >= 2.0)}'; then
-            live_pass "sqlsim thread scaling (P2) [${scale}x]"
-        else
-            live_fail "sqlsim thread scaling (P2)" "throughput scaling ${scale}x below 2.0x floor"
-        fi
+    if [[ "$skip_thread_scaling" == true ]]; then
+        live_skip "sqlsim thread scaling (P2)" "throughput gate can vary on shared runners"
     else
-        live_fail "sqlsim thread scaling (P2)" "sqlsim invocation failed"
+        t_n1="$(perf_run -n 1 -r 5000)"
+        t_n4="$(perf_run -n 4 -r 5000)"
+        cpu_count="$(nproc 2>/dev/null || echo 1)"
+        if [[ "$cpu_count" -lt 4 ]]; then
+            # The 2.0x floor assumes at least 4 logical CPUs; fewer cores cap scaling.
+            live_skip "sqlsim thread scaling (P2)" "needs >= 4 logical CPUs, host has $cpu_count"
+        elif [[ -n "$t_n1" && -n "$t_n4" ]]; then
+            scale="$(awk -v a="$t_n1" -v b="$t_n4" 'BEGIN{printf "%.2f", (4.0*a)/b}')"
+            if awk -v s="$scale" 'BEGIN{exit !(s >= 2.0)}'; then
+                live_pass "sqlsim thread scaling (P2) [${scale}x]"
+            else
+                live_fail "sqlsim thread scaling (P2)" "throughput scaling ${scale}x below 2.0x floor"
+            fi
+        else
+            live_fail "sqlsim thread scaling (P2)" "sqlsim invocation failed"
+        fi
     fi
 
     dur_file="$testing/test-duration-workload.json"

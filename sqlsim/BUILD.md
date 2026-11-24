@@ -189,6 +189,8 @@ bash ./smoke-test-linux.sh --skip-build
 # Live smoke and full suites with SQL authentication
 bash ./smoke-test-linux.sh --skip-build --server HOST[,PORT] --database DB \
   --username USER --password-file FILE
+bash ./smoke-test-linux.sh --skip-build --skip-thread-scaling \
+  --server HOST[,PORT] --database DB --username USER --password-file FILE
 bash ./full-test-suite-linux.sh --server HOST[,PORT] --database DB \
   --username USER --password-file FILE
 
@@ -211,6 +213,9 @@ Notes:
   process list; `--token` and `--password` still put it on the suite's own
   command line, so prefer the file options.
 - The full suite needs `jq` (`sudo apt-get install -y jq`).
+- `--skip-thread-scaling` skips the smoke suite's P2 throughput gate for shared
+  runners where CPU variability makes the measurement unreliable. It remains
+  enabled by default; the PowerShell equivalent is `-SkipThreadScaling`.
 - `--login-timeout` controls the 1024-thread scale tests in the Linux sqlsim
   full suite. Increase it for targets that take longer to accept a connection
   storm; it defaults to 60 seconds, matching `-LoginTimeout` in the

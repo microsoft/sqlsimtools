@@ -30,6 +30,9 @@
 .PARAMETER OutputFile
     Write all test output to the specified file (captures console output via transcript).
 
+.PARAMETER SkipThreadScaling
+    Skip the P2 throughput gate when running on a shared or noisy machine.
+
 .EXAMPLE
     .\smoke-test.ps1
     .\smoke-test.ps1 -Verbose 1
@@ -48,7 +51,8 @@ param(
     [string]$Password = "",
     [int]$Verbose = 0,
     [string]$OutputFile = "",
-    [string]$PerfTag = ""
+    [string]$PerfTag = "",
+    [switch]$SkipThreadScaling
 )
 
 $ErrorActionPreference = "Continue"
@@ -1081,21 +1085,26 @@ Write-Host ""
 #   HT-only / E-core hardware).
 # ------------------------------------------------------------
 Write-Host "Test 38: sqlsim thread scaling (P2)" -ForegroundColor White
-$t_n1 = Invoke-PerfRun @("-n", "1", "-r", "5000")
-$t_n4 = Invoke-PerfRun @("-n", "4", "-r", "5000")
-if ($t_n1 -and $t_n4) {
-    $throughputScale = (4.0 * $t_n1) / $t_n4
-    Write-Host ("  n=1: {0:N3}s  n=4: {1:N3}s  throughput scaling: {2:N2}x" -f $t_n1, $t_n4, $throughputScale) -ForegroundColor Gray
-    if ($throughputScale -ge 2.0) {
-        Write-Host ("  `u{2713} PASSED (throughput scaling {0:N2}x >= 2.0x)" -f $throughputScale) -ForegroundColor Green
-        $script:testsPassed++
+if ($SkipThreadScaling) {
+    Write-Host "  - SKIPPED: throughput gate can vary on shared runners" -ForegroundColor Yellow
+    $script:testsSkipped++
+} else {
+    $t_n1 = Invoke-PerfRun @("-n", "1", "-r", "5000")
+    $t_n4 = Invoke-PerfRun @("-n", "4", "-r", "5000")
+    if ($t_n1 -and $t_n4) {
+        $throughputScale = (4.0 * $t_n1) / $t_n4
+        Write-Host ("  n=1: {0:N3}s  n=4: {1:N3}s  throughput scaling: {2:N2}x" -f $t_n1, $t_n4, $throughputScale) -ForegroundColor Gray
+        if ($throughputScale -ge 2.0) {
+            Write-Host ("  `u{2713} PASSED (throughput scaling {0:N2}x >= 2.0x)" -f $throughputScale) -ForegroundColor Green
+            $script:testsPassed++
+        } else {
+            Write-Host ("  `u{2717} FAILED: throughput scaling {0:N2}x below 2.0x floor \u2014 threading regression suspected" -f $throughputScale) -ForegroundColor Red
+            $script:testsFailed++
+        }
     } else {
-        Write-Host ("  `u{2717} FAILED: throughput scaling {0:N2}x below 2.0x floor \u2014 threading regression suspected" -f $throughputScale) -ForegroundColor Red
+        Write-Host "  `u{2717} FAILED: sqlsim invocation failed (t_n1=$t_n1 t_n4=$t_n4)" -ForegroundColor Red
         $script:testsFailed++
     }
-} else {
-    Write-Host "  `u{2717} FAILED: sqlsim invocation failed (t_n1=$t_n1 t_n4=$t_n4)" -ForegroundColor Red
-    $script:testsFailed++
 }
 
 # Save perf measurements (trend tracking only — no pass/fail gate)
